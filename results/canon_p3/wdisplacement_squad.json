@@ -1,0 +1,23 @@
+{
+  "dataset": "squad",
+  "n": 64,
+  "scale": 0.475,
+  "layers_sampled": [
+    9,
+    17,
+    21,
+    28
+  ],
+  "module": "down_proj",
+  "chunk": 0,
+  "rel_native_mean": 0.36012557052838967,
+  "rel_native_sd": 0.03898391753671017,
+  "rel_native_min": 0.28881933426720274,
+  "rel_native_max": 0.4582356388292323,
+  "rel_canon_mean": 0.5162327537424471,
+  "rel_canon_sd": 0.198269061756853,
+  "rel_canon_min": 0.2148461417891578,
+  "rel_canon_max": 0.7993532261570977,
+  "ratio_canon_over_native": 1.4334798636625863,
+  "norm_match_abs_err": 0.15610718321405748
+}
