@@ -1,5 +1,7 @@
 # Headroom Is Not Selectability: anonymous supplementary material
 
+Anonymized archive: https://anonymous.4open.science/r/-headroom-selectability-supp-8BDE/
+
 **This archive is the supplementary material for the submission, not the paper itself.** The paper
 PDF is submitted separately through the review system; what is published here is everything a
 reviewer needs to verify it: the analysis and plotting code, and the small result summaries needed
