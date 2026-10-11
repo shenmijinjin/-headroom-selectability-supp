@@ -6,18 +6,20 @@ finite set of observed queries?
 
 Null model: preserve each query's marginal reward distribution over the K candidates, but break
 the (query -> action) correspondence by independently permuting the action order within each query.
-This keeps every query's per-candidate reward multiset intact while destroying any shared
-cross-query action structure, so a positive aggregate oracle under the null reflects only the
-finite-sample max, not a consistent good action.
+This preserves each query's reward multiset. Permuting pair blocks breaks shared
+pair identity while retaining within-pair orientation. The excess estimates the
+observed aggregate maximum above this constrained null; it does not prove the
+existence or absence of an action that generalizes to unobserved queries.
 
 We keep the antithetic (+/-) pairing in the real data and apply the SAME permutation to both
 members of a pair, so the null preserves the pairing structure.
 
-For each context: real U_c(a_c*) vs null U_c(a_c*) over R permutations; also held-out selection
-gain under the same null. Uncertainty reported per passage (the independent unit).
+For each context: real U_c(a_c*) vs its mean under R null permutations.
+Uncertainty resamples passages and is conditional on the fixed null draws.
 """
-import json, os, sys
+import argparse, json, os
 import numpy as np
+from bootstrap_utils import clustered_summary, source_sha256
 RESULTS_DIR = os.environ.get("RESULTS_DIR", "results")
 BASE = os.path.join(RESULTS_DIR, "e2_perquery")
 TASKS = ["squad", "drop", "ropes", "pwc"]
@@ -55,33 +57,41 @@ def perm_null_ctx_oracle(cr, br, rng):
 
 
 def main():
-    res = {}
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--output-dir', default=os.path.join(RESULTS_DIR, 'perm_null'))
+    args = parser.parse_args()
+    res = {'_meta': {'schema_version': 2, 'null_permutations_per_passage': R,
+                     'bootstrap_unit': 'passage', 'estimand': 'passage_equal',
+                     'bootstrap_replicates': 10000, 'bootstrap_seed': 0,
+                     'null': 'independent permutation of adjacent antithetic pair indices per query; pair orientation retained',
+                     'source_sha256': {}}}
     for w in (["qwen", "gemma"] if os.path.exists(f"{BASE}/gemma_squad_s42.json") else ["qwen"]):
         res[w] = {}
         for t in TASKS:
             ctxs = load(t, w)
+            res['_meta']['source_sha256'][w + '_' + t] = source_sha256(f'{BASE}/{w}_{t}_s42.json')
             real = np.array([ctx_oracle(cr, br) for cr, br in ctxs])
             null_means = np.zeros(len(ctxs))
             for ci, (cr, br) in enumerate(ctxs):
                 rng = np.random.default_rng(1000 + ci)
                 null_means[ci] = np.mean([perm_null_ctx_oracle(cr, br, rng) for _ in range(R)])
             exc = real - null_means
-            res[w][t] = dict(n_ctx=len(ctxs), real=float(real.mean()),
-                             null=float(null_means.mean()),
-                             excess=float(exc.mean()),
-                             excess_ci=ci_of(exc),
-                             real_ci=ci_of(real), null_ci=ci_of(null_means))
-            print(w, t, "real=%.4f null=%.4f excess=%+.4f CI%s" % (real.mean(), null_means.mean(), (real-null_means).mean(), [round(x,4) for x in ci_of(real-null_means)]), flush=True)
-    outdir = os.path.join(RESULTS_DIR, "perm_null")
+            values = np.column_stack([real, null_means, exc])
+            summary = clustered_summary(values, [str(i) for i in range(len(ctxs))])
+            pt, ci = summary['point'], summary['ci']
+            res[w][t] = dict(n_ctx=len(ctxs), real=pt[0], null=pt[1], excess=pt[2],
+                             real_ci=ci[0], null_ci=ci[1], excess_ci=ci[2],
+                             per_passage=[dict(passage_index=i, real=float(v[0]), null=float(v[1]), excess=float(v[2]))
+                                          for i, v in enumerate(values)])
+            print(w, t, "real=%.4f null=%.4f excess=%+.4f CI%s" % (*pt, [round(x,4) for x in ci[2]]), flush=True)
+    outdir = args.output_dir
     os.makedirs(outdir, exist_ok=True)
-    json.dump(res, open(os.path.join(outdir, "report.json"), "w"), indent=2)
+    json.dump(res, open(os.path.join(outdir, "report.json"), "w"), indent=2, allow_nan=False)
     print("WROTE", os.path.join(outdir, "report.json"))
 
 
 def ci_of(v, n=10000):
-    v = np.asarray(v); nn = len(v); rng = np.random.default_rng(0)
-    b = v[rng.integers(0, nn, (n, nn))].mean(1)
-    return [float(np.quantile(b, .025)), float(np.quantile(b, .975))]
+    return clustered_summary(v, [str(i) for i in range(len(v))], n_boot=n)['ci']
 
 
 if __name__ == "__main__":

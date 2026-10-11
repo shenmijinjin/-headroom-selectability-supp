@@ -1,0 +1,252 @@
+{
+  "schema_version": 2,
+  "n_fixed_inits": 3,
+  "primary_estimand": "task_equal_row",
+  "cells": [
+    "A",
+    "B",
+    "C",
+    "D"
+  ],
+  "init_aggregation": "align identities and average predictions before shared passage resampling",
+  "strata": "task x seen/unseen passages; seen and unseen are disjoint cohorts",
+  "uncertainty_scope": "passage sampling conditional on fixed fits and action seeds",
+  "task_equal_row": {
+    "n_passages": 1132,
+    "n_rows": 9600,
+    "estimand": "task_equal_row",
+    "bootstrap_unit": "passage",
+    "bootstrap_replicates": 10000,
+    "bootstrap_seed": 0,
+    "task_order": [
+      "squad",
+      "drop",
+      "ropes",
+      "pwc"
+    ],
+    "n_passages_per_task": {
+      "squad": 367,
+      "drop": 256,
+      "ropes": 169,
+      "pwc": 340
+    },
+    "uncertainty_scope": "sampling passages conditional on fixed fits, action seeds and MC draws",
+    "cells": {
+      "A": {
+        "selected_minus_base": {
+          "point": 0.03447205685409712,
+          "ci": [
+            0.028565784725081186,
+            0.041309913638633976
+          ]
+        },
+        "selected_minus_random": {
+          "point": 0.04102079703251098,
+          "ci": [
+            0.036651407322549054,
+            0.04586943604975132
+          ]
+        }
+      },
+      "B": {
+        "selected_minus_base": {
+          "point": 0.015743021957671955,
+          "ci": [
+            0.009724106518639029,
+            0.022787779262891793
+          ]
+        },
+        "selected_minus_random": {
+          "point": 0.023143861511327333,
+          "ci": [
+            0.019380499810554376,
+            0.027623801980518142
+          ]
+        }
+      },
+      "C": {
+        "selected_minus_base": {
+          "point": -0.00035973448877717087,
+          "ci": [
+            -0.005332933079530153,
+            0.004691717060505402
+          ]
+        },
+        "selected_minus_random": {
+          "point": 0.003878523424695205,
+          "ci": [
+            0.0011841027511142427,
+            0.00670337007773103
+          ]
+        }
+      },
+      "D": {
+        "selected_minus_base": {
+          "point": 0.0006055120046543315,
+          "ci": [
+            -0.005159033548995531,
+            0.006951148898273504
+          ]
+        },
+        "selected_minus_random": {
+          "point": 0.004271591216813597,
+          "ci": [
+            0.0011045066511221238,
+            0.007573530365611187
+          ]
+        }
+      }
+    },
+    "contrasts": {
+      "A-C": {
+        "point": 0.03483179134287429,
+        "ci": [
+          0.026838019066272954,
+          0.04315440567469919
+        ]
+      },
+      "B-D": {
+        "point": 0.015137509953017624,
+        "ci": [
+          0.006296465085275585,
+          0.024110067142369407
+        ]
+      },
+      "A-B": {
+        "point": 0.018729034896425165,
+        "ci": [
+          0.01574034356256301,
+          0.021946620767797024
+        ]
+      },
+      "C-D": {
+        "point": -0.0009652464934315024,
+        "ci": [
+          -0.004316446402840805,
+          0.002155287304667579
+        ]
+      }
+    }
+  },
+  "row_pooled": {
+    "n_passages": 1132,
+    "n_rows": 9600,
+    "estimand": "row_pooled",
+    "bootstrap_unit": "passage",
+    "bootstrap_replicates": 10000,
+    "bootstrap_seed": 0,
+    "task_order": [
+      "squad",
+      "drop",
+      "ropes",
+      "pwc"
+    ],
+    "n_passages_per_task": {
+      "squad": 367,
+      "drop": 256,
+      "ropes": 169,
+      "pwc": 340
+    },
+    "uncertainty_scope": "sampling passages conditional on fixed fits, action seeds and MC draws",
+    "cells": {
+      "A": {
+        "selected_minus_base": {
+          "point": 0.03529268213665008,
+          "ci": [
+            0.029002088335728277,
+            0.04238483960997603
+          ]
+        },
+        "selected_minus_random": {
+          "point": 0.04171245160019114,
+          "ci": [
+            0.0369470724492271,
+            0.04705699350054139
+          ]
+        }
+      },
+      "B": {
+        "selected_minus_base": {
+          "point": 0.016439056787658033,
+          "ci": [
+            0.01015717611174207,
+            0.02370528102694706
+          ]
+        },
+        "selected_minus_random": {
+          "point": 0.023649379567065417,
+          "ci": [
+            0.019711420154477993,
+            0.02841348914331908
+          ]
+        }
+      },
+      "C": {
+        "selected_minus_base": {
+          "point": -0.00033654820834294044,
+          "ci": [
+            -0.005187029145062346,
+            0.004529118590425229
+          ]
+        },
+        "selected_minus_random": {
+          "point": 0.003720659632287956,
+          "ci": [
+            0.001174719900392446,
+            0.006407861421289967
+          ]
+        }
+      },
+      "D": {
+        "selected_minus_base": {
+          "point": 0.0006228064208649604,
+          "ci": [
+            -0.005018418923974602,
+            0.006617103901508899
+          ]
+        },
+        "selected_minus_random": {
+          "point": 0.00408726227678829,
+          "ci": [
+            0.001195236245151311,
+            0.007140471364942912
+          ]
+        }
+      }
+    },
+    "contrasts": {
+      "A-C": {
+        "point": 0.03562923034499302,
+        "ci": [
+          0.027509008449148345,
+          0.044283231963121866
+        ]
+      },
+      "B-D": {
+        "point": 0.015816250366793072,
+        "ci": [
+          0.006862894632004342,
+          0.02509619517037196
+        ]
+      },
+      "A-B": {
+        "point": 0.018853625348992046,
+        "ci": [
+          0.015647171477435287,
+          0.022327958831913745
+        ]
+      },
+      "C-D": {
+        "point": -0.0009593546292079009,
+        "ci": [
+          -0.004148868734106842,
+          0.0020600813498107043
+        ]
+      }
+    }
+  },
+  "source": {
+    "logical_artifact": "factorial_predictions/predictions.json",
+    "sha256": "28b505e4ceb9a44b22c278f56d56510b56362f1c7a1528c156f6b9e9c9e9b19a"
+  }
+}

@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """R41 factorial: passage-level 2x2 (context x action) decomposition, Qwen + Gemma.
-Same critic/protocol as r41_g4_passage but splits passages into train/test (dev merged for the 2x2,
-no gate) and evaluates the four cells. No gate calibration."""
+The rng=0 half/half passage split is a separate protocol from P3 thirds.
+Passage identity is exact stored-context equality within writer/task. No gate.
+Sufficient per-init predictions are exported for task-equal, jointly clustered CIs."""
 import argparse, json, os
 import numpy as np
 import torch, torch.nn as nn, torch.nn.functional as F
+from bootstrap_utils import anonymous_passage_id, source_sha256
+from p3_statistics import validated_pool, task_equal_point
+from r41_factorial_ci import summarize_factorial
 TASKS = ["squad", "drop", "ropes", "pwc"]
 
 def make(L_LAYERS, D_MODEL, MU_DIR, POOL):
@@ -48,10 +52,12 @@ def make(L_LAYERS, D_MODEL, MU_DIR, POOL):
         out = []
         for task in TASKS:
             f = POOL.replace("SEED", str(seed)).replace("TASK", task)
-            if not os.path.isfile(f): continue
-            d = json.load(open(f)); act = np.load(f.replace(".json", ".actions.npz"))["actions"]
+            if not os.path.isfile(f): raise FileNotFoundError(f)
+            d, act = validated_pool(f, R_RANK)
             for i, r in enumerate(d["rows"]):
-                out.append({"task": task, "row": int(r["row"]), "pid": "%s::%s" % (task, r["context"]),
+                out.append({"task": task, "row": int(r["row"]), "pid": "%s::%s" % (task, r["context"]), "seed": seed,
+                            "passage_id": anonymous_passage_id(task, r["context"]),
+                            "baseline_reward": float(r["baseline_reward"]),
                             "delta_r": (np.asarray(r["candidate_rewards"], dtype=np.float32) - float(r["baseline_reward"])).tolist(),
                             "act": act[i]})
         return out
@@ -64,12 +70,13 @@ def make(L_LAYERS, D_MODEL, MU_DIR, POOL):
     @torch.no_grad()
     def predict(model, entries, device):
         ld = torch.utils.data.DataLoader(DS(entries), batch_size=8, shuffle=False, collate_fn=collate)
-        sd, allr = [], []
+        sd, allr, choices = [], [], []
         for b in ld:
             A = model(b["mu"].to(device), b["u"].to(device)).cpu(); dr = b["dr"]
             sel = A.argmax(1); rows = range(dr.shape[0])
             sd += dr[rows, sel].numpy().tolist(); allr += dr.numpy().tolist()
-        return np.array(sd), np.array(allr)
+            choices += sel.numpy().tolist()
+        return np.array(sd), np.array(allr), choices
     return DS, Critic, load_seed, loss_fn, predict, collate
 
 def run(name, L_LAYERS, MU_DIR, POOL, tr_seeds, te_seeds, out_dir):
@@ -86,8 +93,27 @@ def run(name, L_LAYERS, MU_DIR, POOL, tr_seeds, te_seeds, out_dir):
     cell_C = [e for e in train_pool if e["pid"] in te_p]
     cell_D = [e for e in test_pool if e["pid"] in te_p]
     print(name, "cell sizes A/B/C/D:", len(cell_A), len(cell_B), len(cell_C), len(cell_D), flush=True)
-    results = {"meta": {"name": name, "split_unit": "passage", "train_seeds": tr_seeds, "test_seeds": te_seeds}, "init_cells": []}
-    rng = np.random.default_rng(7)
+    for entries in [cell_A, cell_B, cell_C, cell_D]:
+        task_equal_point(np.zeros(len(entries)), [e["task"] for e in entries])
+    source_files = {}
+    for seed in tr_seeds + te_seeds:
+        for task in TASKS:
+            path = POOL.replace("SEED", str(seed)).replace("TASK", task)
+            source_files[f"reward_pool/{task}/seed{seed}"] = source_sha256(path)
+            action_path = path.replace(".json", ".actions.npz")
+            source_files[f"action_pool/{task}/seed{seed}"] = source_sha256(action_path)
+    for task in TASKS:
+        mu_path = os.path.join(MU_DIR, task + ".pooled.npz")
+        source_files[f"mu_tokens/{task}"] = source_sha256(mu_path)
+    results = {"meta": {"schema_version": 2, "name": name, "split_unit": "passage",
+                        "passage_identity": "exact stored context equality within writer/task",
+                        "split_rng_seed": 0, "split": "half/half; distinct from P3 thirds",
+                        "train_seeds": tr_seeds, "test_seeds": te_seeds,
+                        "primary_estimand": "task_equal_row", "epochs": 20, "init_seeds": [0,1,2],
+                        "source_files_sha256": source_files,
+                        "metric_definitions": "selected/random/oracle are reward deltas relative to baseline; selected_action_index indexes source candidate pool",
+                        "init_predictions_file": "predictions.json"}, "init_cells": []}
+    init_predictions = []
     for init in [0, 1, 2]:
         torch.manual_seed(init); model = Critic().to(device)
         ds_tr = DS(cell_A); acc, nseen = torch.zeros(DS(cell_A)[0]["mu"].shape[0], 1, device=device), 0
@@ -102,13 +128,26 @@ def run(name, L_LAYERS, MU_DIR, POOL, tr_seeds, te_seeds, out_dir):
                 A = model(b["mu"].to(device), b["u"].to(device)); dr = b["dr"].to(device)
                 L = loss_fn(A, dr); opt.zero_grad(set_to_none=True); L.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0); opt.step()
-        model.eval(); cell = {"init": init}
+        model.eval(); cell = {"init": init}; raw_rows = []
         for nm, entries in [("A", cell_A), ("B", cell_B), ("C", cell_C), ("D", cell_D)]:
-            sd, allr = predict(model, entries, device)
-            cell[nm] = {"sel_minus_random": float((sd - allr.mean(1)).mean()), "sel_minus_base": float(sd.mean())}
-            print(json.dumps({"init": init, "cell": nm, "sel_base": cell[nm]["sel_minus_base"]}), flush=True)
+            sd, allr, choices = predict(model, entries, device)
+            tasks = [e["task"] for e in entries]
+            cell[nm] = {"task_equal_row": {"sel_minus_base": task_equal_point(sd, tasks),
+                                          "sel_minus_random": task_equal_point(sd - allr.mean(1), tasks)},
+                        "row_pooled": {"sel_minus_base": float(sd.mean()),
+                                       "sel_minus_random": float((sd - allr.mean(1)).mean())}}
+            raw_rows.extend(dict(task=e["task"], passage_id=e["passage_id"], row=int(e["row"]),
+                                 action_seed=int(e["seed"]), cell=nm, selected=float(sd[i]),
+                                 selected_action_index=int(choices[i]), baseline_reward=float(e["baseline_reward"]),
+                                 random=float(allr[i].mean()), oracle=float(allr[i].max()))
+                            for i, e in enumerate(entries))
+            print(json.dumps({"init": init, "cell": nm, "sel_base": cell[nm]["task_equal_row"]["sel_minus_base"]}), flush=True)
         results["init_cells"].append(cell)
-    json.dump(results, open(os.path.join(out_dir, "report.json"), "w"), indent=2)
+        init_predictions.append({"init": init, "rows": raw_rows})
+    raw = {"meta": results["meta"], "init_predictions": init_predictions}
+    json.dump(raw, open(os.path.join(out_dir, "predictions.json"), "w"), indent=2, allow_nan=False)
+    results["aggregate"] = summarize_factorial(raw)
+    json.dump(results, open(os.path.join(out_dir, "report.json"), "w"), indent=2, allow_nan=False)
     print("WROTE", name, flush=True)
 
 if __name__ == "__main__":

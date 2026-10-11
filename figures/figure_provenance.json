@@ -1,0 +1,36 @@
+{
+  "query": {
+    "same_and_held": "mean across 20 fixed query partitions; partition SD is not plotted as CI",
+    "intervals": "same/held: resample passages after averaging fixed partitions; aggregate/C: q1 JSON intervals",
+    "width_in": 3.031496062992126,
+    "height_in": 3.25
+  },
+  "selection": {
+    "intervals": "paired passage bootstrap 95% intervals from JSON",
+    "query_count_cohort": "same passages with at least three queries for k=1 and k=2",
+    "width_in": 6.173228346456693,
+    "height_in": 2.2
+  },
+  "ranking": {
+    "native": {
+      "n_pairs": 844,
+      "mean": 0.03003768541582696,
+      "fraction_above_0_3": 0.20260663507109006
+    },
+    "canon": {
+      "n_pairs": 995,
+      "mean": 0.13254224545216725,
+      "fraction_above_0_3": 0.3316582914572864
+    },
+    "width_in": 3.031496062992126,
+    "height_in": 2.15
+  },
+  "source_sha256": {
+    "q1_query_consistency/qwen.json": "7cfde6ba32b7e7759271dd12b0d06bf2c6508984600e5be8adeb16a5f8a42aba",
+    "q1_query_consistency/gemma.json": "716bf42fd660a59eab5238284f7118cae309883283e7ed77a3c805f9c4188dec",
+    "perm_null/report.json": "1716e621e4e0128682dd1719b07765831cf75280e7aafa4434476334ee799e02",
+    "query_count/report.json": "d50096521cb44dd52cdfb29291dd208aef5f6552762cd31bd1bbbeb7b32d61fd",
+    "figures/fig_e4_rhos.json": "93795ad1278bc8f1a841c1c06c793e3fc043a8990da3ae0f2766592ecb6d7ab4"
+  },
+  "notes": "Query-consistency figure (fig:qconsist) partition sensitivity is not a sampling CI; legacy row-factorial data are not used."
+}

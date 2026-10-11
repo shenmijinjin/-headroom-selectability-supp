@@ -1,169 +1,147 @@
 #!/usr/bin/env python3
-"""R8 Q1: query-consistent functional headroom + query-response consistency C(c).
-
-Reads per-(context, candidate, query) rewards from e2_perquery/{writer}_{task}_s42.json.
-All statistics resample CONTEXTS (the independent unit). The 20-split procedure reports
-split-replicate SD (partition sensitivity), not a bootstrap CI over independent samples.
-
-Outputs one JSON per writer with per-task and macro results; printed summary is the record.
+"""Source-backed query-access summaries with explicit partition and sampling uncertainty.
+Canonical split: one seed-0 generator per task, consumed in stored passage order.
+Twenty re-splits: historical seed-(1000+r) generator reset for each passage.
+Both task-equal and passage-pooled summaries are reported. MC repetitions are
+averaged within passage before passage bootstrap; partition SD is not a CI.
 """
-import json, os, os, sys
+import argparse, json, os, warnings
+from pathlib import Path
 import numpy as np
 from scipy.stats import spearmanr
-
-BASE = os.path.join(os.environ.get("RESULTS_DIR", "results"), "e2_perquery")
-TASKS = ["squad", "drop", "ropes", "pwc"]
+from bootstrap_utils import TASKS, clustered_summary, source_sha256
 R_SPLITS = 20
-N_BOOT = 10000
-writer = sys.argv[1] if len(sys.argv) > 1 else "qwen"
 
 
-def load(task):
-    d = json.load(open(f"{BASE}/{writer}_{task}_s42.json"))
-    out = []
-    for c in d["contexts"]:
-        cr = np.asarray(c["candidate_rewards"], dtype=np.float64)  # [K, nq]
-        br = np.asarray(c["baseline_rewards"], dtype=np.float64)   # [nq]
-        if c["n_queries"] >= 2:
-            out.append((cr, br))
+def split_response(response, rng):
+    perm = rng.permutation(response.shape[1]); nsel = (response.shape[1] + 1) // 2
+    sel, ev = perm[:nsel], perm[nsel:]
+    score = response[:, sel].mean(axis=1); action = int(score.argmax())
+    return float(score[action]), float(response[action, ev].mean())
+
+
+def safe_correlation(left, right):
+    left, right = np.asarray(left, float), np.asarray(right, float)
+    valid = np.isfinite(left) & np.isfinite(right)
+    if valid.sum() < 2 or np.ptp(left[valid]) == 0 or np.ptp(right[valid]) == 0: return None
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore'); value = float(spearmanr(left[valid], right[valid]).statistic)
+    return value if np.isfinite(value) else None
+
+
+def fixed_passage_stats(response):
+    rhos, top1, opposite, nonzero, slots = [], [], 0, 0, 0
+    for i in range(response.shape[1]):
+        for j in range(i + 1, response.shape[1]):
+            ri, rj = response[:, i], response[:, j]
+            rho = safe_correlation(ri, rj)
+            if rho is not None: rhos.append(rho)
+            top1.append(int(ri.argmax() == rj.argmax()))
+            opposite += int(((ri * rj) < 0).sum())
+            nonzero += int(((np.abs(ri) > 1e-9) & (np.abs(rj) > 1e-9)).sum())
+            slots += len(ri)
+    return dict(ctx_oracle=float(response.mean(axis=1).max()),
+                per_query_oracle=float(response.max(axis=0).mean()),
+                C=float(np.mean(rhos)) if rhos else None, top1=float(np.mean(top1)),
+                signconf=float(opposite / slots),
+                signconf_nonzero=float(opposite / nonzero) if nonzero else None)
+
+
+def finite_ci(values):
+    valid = [(i, v) for i, v in enumerate(values) if v is not None and np.isfinite(v)]
+    return clustered_summary([v for _, v in valid], [str(i) for i, _ in valid])['ci'] if len(valid) >= 3 else None
+
+
+def split_summary(same, held):
+    same, held = np.asarray(same), np.asarray(held)
+    return dict(same=float(same.mean()), held=float(held.mean()),
+                same_sd=float(same.std(ddof=0)), held_sd=float(held.std(ddof=0)),
+                positive_fraction=float((held > 0).mean()),
+                retention_ratio_of_means=float(held.mean() / same.mean()) if abs(same.mean()) > 1e-9 else None,
+                same_by_split=same.tolist(), held_by_split=held.tolist(),
+                sd_definition='population SD across query partitions on shared passages; not a sampling CI')
+
+
+def analyse_writer(writer, results_dir):
+    base = Path(results_dir) / 'e2_perquery'
+    out = dict(writer=writer, n_splits=R_SPLITS, tasks={},
+               meta=dict(schema_version=2, bootstrap_unit='passage', bootstrap_replicates=10000,
+                         bootstrap_seed=0, canonical_seed=0,
+                         canonical_rng_scope='one generator per task, consumed in stored passage order',
+                         repeated_split_seeds=list(range(1000, 1000 + R_SPLITS)),
+                         repeated_rng_scope='fresh generator per passage and split; historical convention',
+                         signconf_definition='opposite signs over all candidate/query-pair slots; zeros are not sign conflicts',
+                         source_sha256={}))
+    all_same, all_held, all_oracles, all_pids, all_tasks, canonical_rows = [], [], [], [], [], []
+    task_same, task_held = [], []
+    for task in TASKS:
+        source = base / f'{writer}_{task}_s42.json'
+        out['meta']['source_sha256'][task] = source_sha256(source)
+        contexts = [c for c in json.loads(source.read_text())['contexts'] if c['n_queries'] >= 2]
+        canonical_rng = np.random.default_rng(0)
+        fixed, same, held, canonical, records = [], [], [], [], []
+        for context in contexts:
+            cr, br = np.asarray(context['candidate_rewards'], float), np.asarray(context['baseline_rewards'], float)
+            if cr.shape[1] != context['n_queries'] or len(br) != cr.shape[1]: raise ValueError('Inconsistent query dimensions')
+            response = cr - br[None, :]; st = fixed_passage_stats(response); fixed.append(st)
+            draws = [split_response(response, np.random.default_rng(1000 + r)) for r in range(R_SPLITS)]
+            same.append([x[0] for x in draws]); held.append([x[1] for x in draws])
+            canonical.append(split_response(response, canonical_rng))
+            pid = f'{task}::{context["ctx_index"]}'
+            records.append(dict(passage_id=pid, ctx_index=context['ctx_index'], first_row=context['first_row'],
+                                n_queries=context['n_queries'], **st, same_by_split=same[-1], held_by_split=held[-1],
+                                canonical_same=canonical[-1][0], canonical_held=canonical[-1][1]))
+            all_pids.append(pid); all_tasks.append(task)
+        same, held, canonical = np.asarray(same), np.asarray(held), np.asarray(canonical)
+        oracle = np.array([x['ctx_oracle'] for x in fixed]); pids = [r['passage_id'] for r in records]
+        repeated = split_summary(same.mean(axis=0), held.mean(axis=0))
+        sampled = clustered_summary(np.column_stack([same.mean(axis=1), held.mean(axis=1), oracle]), pids)
+        single = clustered_summary(canonical, pids)
+        finite_C = [x['C'] for x in fixed if x['C'] is not None]
+        nonzero_conf = [x['signconf_nonzero'] for x in fixed if x['signconf_nonzero'] is not None]
+        out['tasks'][task] = dict(n_ctx=len(contexts), **repeated, retention=repeated['retention_ratio_of_means'],
+            same_passage_ci=sampled['ci'][0], held_passage_ci=sampled['ci'][1],
+            ctx_oracle=float(oracle.mean()), ctx_oracle_ci=sampled['ci'][2],
+            per_query_oracle=float(np.mean([x['per_query_oracle'] for x in fixed])),
+            C=float(np.mean(finite_C)) if finite_C else None, C_ci=finite_ci([x['C'] for x in fixed]),
+            n_finite_C=len(finite_C), top1=float(np.mean([x['top1'] for x in fixed])),
+            top1_definition='deterministic argmax equality across query pairs; not tie-aware',
+            signconf=float(np.mean([x['signconf'] for x in fixed])),
+            signconf_nonzero=float(np.mean(nonzero_conf)) if nonzero_conf else None,
+            canonical_single_split=dict(seed=0, same=single['point'][0], held=single['point'][1],
+                                        same_ci=single['ci'][0], held_ci=single['ci'][1]), per_passage=records)
+        task_same.append(same.mean(axis=0)); task_held.append(held.mean(axis=0))
+        all_same.extend(same); all_held.extend(held); all_oracles.extend(oracle); canonical_rows.extend(canonical)
+    all_same, all_held, all_oracles = np.asarray(all_same), np.asarray(all_held), np.asarray(all_oracles)
+    averaged = np.column_stack([all_same.mean(axis=1), all_held.mean(axis=1), all_oracles])
+    out['macro_summaries'] = {}; out['canonical_single_split'] = dict(seed=0, rng_scope=out['meta']['canonical_rng_scope'])
+    for label, estimand, s, h in [('task_equal', 'task_equal_passage', np.mean(task_same, axis=0), np.mean(task_held, axis=0)),
+                                 ('context_pooled', 'passage_equal', all_same.mean(axis=0), all_held.mean(axis=0))]:
+        macro = split_summary(s, h)
+        sampled = clustered_summary(averaged, all_pids, all_tasks, estimand=estimand, task_order=TASKS)
+        macro.update(same_passage_ci=sampled['ci'][0], held_passage_ci=sampled['ci'][1],
+                     ctx_oracle=sampled['point'][2], ctx_oracle_ci=sampled['ci'][2], estimand=estimand, n_ctx=len(all_pids))
+        out['macro_summaries'][label] = macro
+        single = clustered_summary(canonical_rows, all_pids, all_tasks, estimand=estimand, task_order=TASKS)
+        out['canonical_single_split'][label] = dict(same=single['point'][0], held=single['point'][1],
+                                                   same_ci=single['ci'][0], held_ci=single['ci'][1], estimand=estimand, n_ctx=len(all_pids))
+    equal = out['macro_summaries']['task_equal']
+    out['macro'] = {k: equal[k] for k in ['same', 'held', 'ctx_oracle']}
+    for field in ['C', 'top1', 'signconf', 'retention']:
+        out['macro'][field] = float(np.mean([out['tasks'][t][field] for t in TASKS]))
+    out['task_level'] = dict(rho_C_retention=safe_correlation([out['tasks'][t]['C'] for t in TASKS], [out['tasks'][t]['retention'] for t in TASKS]),
+                             rho_C_ctxoracle=safe_correlation([out['tasks'][t]['C'] for t in TASKS], [out['tasks'][t]['ctx_oracle'] for t in TASKS]))
     return out
 
 
-def split_half(nq, rng):
-    perm = rng.permutation(nq)
-    nsel = (nq + 1) // 2
-    return perm[:nsel], perm[nsel:]
-
-
-def ctx_stats(cr, br, rng):
-    """Per-context quantities under one random select/eval query split."""
-    K, nq = cr.shape
-    sel, ev = split_half(nq, rng)
-    dr = cr - br[None, :]                       # [K, nq] delta vs baseline
-    sel_r = dr[:, sel].mean(1)                  # [K]
-    a_star = int(np.argmax(sel_r))
-    same = float(dr[a_star, sel].mean())
-    held = float(dr[a_star, ev].mean())
-    # context-level oracle uses ALL queries (diagnostic upper bound)
-    a_ctx = int(np.argmax(dr.mean(1)))
-    ctx_oracle = float(dr[a_ctx].mean())
-    # query-response consistency across the K candidates
-    if nq >= 2:
-        rhos, top1, signconf, npairs = [], 0, 0, 0
-        for i in range(nq):
-            for j in range(i + 1, nq):
-                ri, rj = dr[:, i], dr[:, j]
-                rho = spearmanr(ri, rj).statistic
-                if np.isfinite(rho):
-                    rhos.append(rho)
-                top1 += int(np.argmax(ri) == np.argmax(rj))
-                si = np.sign(ri[np.abs(ri) > 1e-9]); sj = np.sign(rj[np.abs(ri) > 1e-9])
-                if len(si):
-                    signconf += float(np.mean(si != sj))
-                npairs += 1
-        C = float(np.mean(rhos)) if rhos else np.nan
-        top1 /= max(npairs, 1); signconf /= max(npairs, 1)
-    else:
-        C = top1 = signconf = np.nan
-    base = float(br.mean())
-    return dict(same=same, held=held, ctx_oracle=ctx_oracle, C=C, top1=top1,
-                signconf=signconf, base=base)
-
-
-def boot_ci(vals):
-    vals = np.asarray([v for v in vals if np.isfinite(v)], dtype=np.float64)
-    n = len(vals)
-    if n < 3:
-        return [float("nan"), float("nan")]
-    rng = np.random.default_rng(0)
-    b = vals[rng.integers(0, n, (N_BOOT, n))].mean(1)
-    return [float(np.quantile(b, .025)), float(np.quantile(b, .975))]
-
-
 def main():
-    rng = np.random.default_rng(12345)          # split seeds, frozen
-    out = {"writer": writer, "n_splits": R_SPLITS, "tasks": {}}
-    print(f"== R8 Q1 query-consistency ({writer}) ==  CI resamples contexts (n_boot={N_BOOT})")
-    macro = {k: [] for k in ["same", "held", "ctx_oracle", "C", "top1", "signconf", "retention"]}
-    for task in TASKS:
-        ctxs = load(task)
-        n_ctx = len(ctxs)
-        # split-replicate: per split, mean over contexts; report mean +- sd across splits
-        sames, helds = [], []
-        for r in range(R_SPLITS):
-            s_r = [ctx_stats(cr, br, np.random.default_rng(1000 + r)) for cr, br in ctxs]
-            sames.append(np.mean([x["same"] for x in s_r]))
-            helds.append(np.mean([x["held"] for x in s_r]))
-        # context-level quantities are split-independent (oracle) or averaged over splits
-        per_ctx = [ctx_stats(cr, br, np.random.default_rng(7)) for cr, br in ctxs]
-        ctx_or = np.array([x["ctx_oracle"] for x in per_ctx])
-        C = np.array([x["C"] for x in per_ctx])
-        top1 = np.array([x["top1"] for x in per_ctx])
-        signconf = np.array([x["signconf"] for x in per_ctx])
-        base = np.array([x["base"] for x in per_ctx])
-        sames = np.array(sames); helds = np.array(helds)
-        ret = helds.mean() / sames.mean() if abs(sames.mean()) > 1e-9 else float("nan")
-        # predictive: C(c) vs per-context held-out retention (per split then mean), and vs ctx_oracle
-        per_ctx_held, per_ctx_same = [], []
-        for cr, br in ctxs:
-            hh, ss = [], []
-            for r in range(R_SPLITS):
-                st = ctx_stats(cr, br, np.random.default_rng(1000 + r))
-                hh.append(st["held"]); ss.append(st["same"])
-            per_ctx_held.append(np.mean(hh)); per_ctx_same.append(np.mean(ss))
-        per_ctx_held = np.array(per_ctx_held); per_ctx_same = np.array(per_ctx_same)
-        ok = np.isfinite(C)
-        rho_C_ret = spearmanr(C[ok], (per_ctx_held / np.where(np.abs(per_ctx_same) < 1e-9, np.nan, per_ctx_same))[ok]).statistic if ok.sum() > 5 else np.nan
-        rho_C_orc = spearmanr(C[ok], ctx_or[ok]).statistic if ok.sum() > 5 else np.nan
-        # partial: C vs retention controlling baseline F1 and same-query oracle (rank residuals)
-        def resid(y, X):
-            X = np.column_stack([np.ones(len(X)), X]); beta, *_ = np.linalg.lstsq(X, y, rcond=None)
-            return y - X @ beta
-        reto = (per_ctx_held / np.where(np.abs(per_ctx_same) < 1e-9, np.nan, per_ctx_same))
-        m = ok & np.isfinite(reto)
-        if m.sum() > 8:
-            ry = resid(reto[m], np.column_stack([base[m], per_ctx_same[m]]))
-            rx = resid(C[m], np.column_stack([base[m], per_ctx_same[m]]))
-            rho_partial = spearmanr(rx, ry).statistic
-        else:
-            rho_partial = np.nan
-        ci_same, ci_held, ci_orc = boot_ci([sames.mean()]), boot_ci([helds.mean()]), boot_ci(ctx_or)
-        out["tasks"][task] = dict(
-            n_ctx=n_ctx, same=float(sames.mean()), same_sd=float(sames.std()),
-            held=float(helds.mean()), held_sd=float(helds.std()), retention=float(ret),
-            ctx_oracle=float(ctx_or.mean()), ctx_oracle_ci=boot_ci(ctx_or),
-            C=float(np.nanmean(C)), C_ci=boot_ci(C), top1=float(np.nanmean(top1)),
-            signconf=float(np.nanmean(signconf)),
-            rho_C_retention=None if not np.isfinite(rho_C_ret) else float(rho_C_ret),
-            rho_C_ctxoracle=None if not np.isfinite(rho_C_orc) else float(rho_C_orc),
-            rho_C_retention_partial=None if not np.isfinite(rho_partial) else float(rho_partial))
-        for k, v in [("same", sames.mean()), ("held", helds.mean()), ("ctx_oracle", ctx_or.mean()),
-                     ("C", np.nanmean(C)), ("top1", np.nanmean(top1)),
-                     ("signconf", np.nanmean(signconf)), ("retention", ret)]:
-            macro[k].append(v)
-        print(f"{task:6s} n={n_ctx:3d} same={sames.mean():+.4f}±{sames.std():.3f} "
-              f"held={helds.mean():+.4f}±{helds.std():.3f} ret={ret:.2f} | "
-              f"CTX_ORACLE={ctx_or.mean():+.4f} CI[{ci_orc[0]:+.4f},{ci_orc[1]:+.4f}] | "
-              f"C={np.nanmean(C):+.3f} top1={np.nanmean(top1):.2f} signconf={np.nanmean(signconf):.2f} | "
-              f"rho(C,ret)={rho_C_ret if np.isfinite(rho_C_ret) else float('nan'):+.2f} "
-              f"rho(C,orc)={rho_C_orc if np.isfinite(rho_C_orc) else float('nan'):+.2f} "
-              f"partial={rho_partial if np.isfinite(rho_partial) else float('nan'):+.2f}")
-    out["macro"] = {k: float(np.mean(v)) for k, v in macro.items()}
-    print("MACRO " + json.dumps(out["macro"]))
-    # task-level: does mean C(c) order tasks like retention?
-    Cs = [out["tasks"][t]["C"] for t in TASKS]; rets = [out["tasks"][t]["retention"] for t in TASKS]
-    orcs = [out["tasks"][t]["ctx_oracle"] for t in TASKS]
-    out["task_level"] = dict(
-        rho_C_retention=float(spearmanr(Cs, rets).statistic),
-        rho_C_ctxoracle=float(spearmanr(Cs, orcs).statistic))
-    print("TASK-LEVEL rho(C,retention)=%.3f rho(C,ctx_oracle)=%.3f" %
-          (out["task_level"]["rho_C_retention"], out["task_level"]["rho_C_ctxoracle"]))
-    OUTDIR = os.path.join(os.environ.get("RESULTS_DIR", "results"), "q1_query_consistency")
-    os.makedirs(OUTDIR, exist_ok=True)
-    op = os.path.join(OUTDIR, f"{writer}.json")
-    json.dump(out, open(op, "w"), indent=2)
-    print("WROTE", op)
+    p = argparse.ArgumentParser(); p.add_argument('writer', nargs='?', choices=['qwen', 'gemma'], default='qwen'); p.add_argument('--output-dir')
+    args = p.parse_args(); results = os.environ.get('RESULTS_DIR', 'results')
+    out = analyse_writer(args.writer, results)
+    directory = Path(args.output_dir or str(Path(results) / 'q1_query_consistency')); directory.mkdir(parents=True, exist_ok=True)
+    path = directory / f'{args.writer}.json'; path.write_text(json.dumps(out, indent=2, allow_nan=False))
+    for label, values in out['macro_summaries'].items():
+        print(args.writer, label, 'held=%+.6f SD=%.6f positive=%.2f' % (values['held'], values['held_sd'], values['positive_fraction']))
+    print(args.writer, 'canonical', json.dumps(out['canonical_single_split'])); print('WROTE', path)
 
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__': main()

@@ -8,8 +8,9 @@ holding the evaluation set fixed. Report per-k gain and the paired delta k2-k1 w
 passage-clustered bootstrap CI (passage = context; replicates are Monte Carlo, not independent).
 Only DROP and ROPES have enough nq>=3 contexts; squad/pwc are too sparse and excluded.
 """
-import json, os
+import argparse, json, os
 import numpy as np
+from bootstrap_utils import clustered_summary, source_sha256
 RESULTS_DIR = os.environ.get("RESULTS_DIR", "results")
 BASE = os.path.join(RESULTS_DIR, "e2_perquery")
 TASKS = ["squad", "drop", "ropes", "pwc"]
@@ -28,40 +29,47 @@ def gain(cr, br, sel, ev):
     return float(dr[a, ev].mean())
 
 
-def paci(v):
-    v = np.asarray(v); nn = len(v); rng = np.random.default_rng(0)
-    b = v[rng.integers(0, nn, (10000, nn))].mean(1)
-    return [float(x) for x in np.quantile(b, [.025, .975])]
+def passage_comparison(cr, br, n_replicates=R):
+    """Average matched Monte Carlo draws before doing any population inference."""
+    rows = []
+    for r in range(n_replicates):
+        perm = np.random.default_rng(1000 + r).permutation(cr.shape[1])
+        g1 = gain(cr, br, perm[:1], perm[2:])
+        g2 = gain(cr, br, perm[:2], perm[2:])
+        rows.append([g1, g2, g2 - g1])
+    return np.asarray(rows).mean(axis=0)
 
 
 def main():
-    out = {}
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--output-dir', default=os.path.join(RESULTS_DIR, 'query_count'))
+    args = parser.parse_args()
+    out = {"_meta": {"schema_version": 2, "monte_carlo_replicates_per_passage": R,
+                     "bootstrap_unit": "passage", "estimand": "passage_equal",
+                     "comparison": "first 1 versus first 2 permuted queries; common eval remainder perm[2:]",
+                     "bootstrap_replicates": 10000, "bootstrap_seed": 0,
+                     "fixed_cohort": "n_queries >= 3; tasks with at least 8 passages",
+                     "source_sha256": {}}}
     for w in ["qwen", "gemma"]:
         out[w] = {}
         for t in TASKS:
             ctxs = load(t, w)
+            out['_meta']['source_sha256'][w + '_' + t] = source_sha256(f'{BASE}/{w}_{t}_s42.json')
             if len(ctxs) < 8:
                 out[w][t] = dict(n_ctx=len(ctxs), note="too few nq>=3 contexts")
                 continue
-            per1, per2, deltas = [], [], []
-            for cr, br in ctxs:
-                nq = cr.shape[1]
-                for r in range(R):
-                    rng = np.random.default_rng(1000 + r)
-                    perm = rng.permutation(nq)
-                    sel1, sel2, ev = perm[:1], perm[:2], perm[2:]
-                    g1 = gain(cr, br, sel1, ev)
-                    g2 = gain(cr, br, sel2, ev)
-                    per1.append(g1); per2.append(g2); deltas.append(g2 - g1)
-            per1 = np.array(per1); per2 = np.array(per2); deltas = np.array(deltas)
-            out[w][t] = dict(n_ctx=len(ctxs), k1_gain=float(per1.mean()), k1_ci=paci(per1),
-                             k2_gain=float(per2.mean()), k2_ci=paci(per2),
-                             delta=float(deltas.mean()), delta_ci=paci(deltas))
+            values = np.array([passage_comparison(cr, br) for cr, br in ctxs])
+            summary = clustered_summary(values, [str(i) for i in range(len(ctxs))], estimand='passage_equal')
+            points, intervals = summary['point'], summary['ci']
+            out[w][t] = dict(n_ctx=len(ctxs), k1_gain=points[0], k1_ci=intervals[0],
+                             k2_gain=points[1], k2_ci=intervals[1], delta=points[2], delta_ci=intervals[2],
+                             per_passage=[dict(passage_index=i, k1_gain=float(v[0]), k2_gain=float(v[1]),
+                                               delta=float(v[2])) for i, v in enumerate(values)])
             print(w, t, "n", len(ctxs), "k1=%+.4f k2=%+.4f delta=%+.4f CI%s" %
-                  (per1.mean(), per2.mean(), deltas.mean(), [round(x, 4) for x in paci(deltas)]), flush=True)
-    outdir = os.path.join(RESULTS_DIR, "query_count")
+                  (*points, [round(x, 4) for x in intervals[2]]), flush=True)
+    outdir = args.output_dir
     os.makedirs(outdir, exist_ok=True)
-    json.dump(out, open(os.path.join(outdir, "report.json"), "w"), indent=2)
+    json.dump(out, open(os.path.join(outdir, "report.json"), "w"), indent=2, allow_nan=False)
     print("WROTE", os.path.join(outdir, "report.json"))
 
 

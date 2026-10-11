@@ -1,0 +1,252 @@
+{
+  "schema_version": 2,
+  "n_fixed_inits": 3,
+  "primary_estimand": "task_equal_row",
+  "cells": [
+    "A",
+    "B",
+    "C",
+    "D"
+  ],
+  "init_aggregation": "align identities and average predictions before shared passage resampling",
+  "strata": "task x seen/unseen passages; seen and unseen are disjoint cohorts",
+  "uncertainty_scope": "passage sampling conditional on fixed fits and action seeds",
+  "task_equal_row": {
+    "n_passages": 1132,
+    "n_rows": 4800,
+    "estimand": "task_equal_row",
+    "bootstrap_unit": "passage",
+    "bootstrap_replicates": 10000,
+    "bootstrap_seed": 0,
+    "task_order": [
+      "squad",
+      "drop",
+      "ropes",
+      "pwc"
+    ],
+    "n_passages_per_task": {
+      "squad": 367,
+      "drop": 256,
+      "ropes": 169,
+      "pwc": 340
+    },
+    "uncertainty_scope": "sampling passages conditional on fixed fits, action seeds and MC draws",
+    "cells": {
+      "A": {
+        "selected_minus_base": {
+          "point": 0.06334186534697411,
+          "ci": [
+            0.050757497384238424,
+            0.07648078673773137
+          ]
+        },
+        "selected_minus_random": {
+          "point": 0.07918687895311992,
+          "ci": [
+            0.06945763835140707,
+            0.0890392223305769
+          ]
+        }
+      },
+      "B": {
+        "selected_minus_base": {
+          "point": 0.028601945974175865,
+          "ci": [
+            0.01658758181015653,
+            0.040963188999637905
+          ]
+        },
+        "selected_minus_random": {
+          "point": 0.04252395059842915,
+          "ci": [
+            0.033654235584000526,
+            0.05187055749151384
+          ]
+        }
+      },
+      "C": {
+        "selected_minus_base": {
+          "point": -0.008692861757124588,
+          "ci": [
+            -0.019302603167074776,
+            0.0018168122581505705
+          ]
+        },
+        "selected_minus_random": {
+          "point": 0.0002292824308668251,
+          "ci": [
+            -0.004890988652330978,
+            0.005454970192727185
+          ]
+        }
+      },
+      "D": {
+        "selected_minus_base": {
+          "point": -0.007453973234881121,
+          "ci": [
+            -0.01909750194568551,
+            0.004414078561620176
+          ]
+        },
+        "selected_minus_random": {
+          "point": 0.0030390683330700063,
+          "ci": [
+            -0.0037062561478017958,
+            0.009961016025127037
+          ]
+        }
+      }
+    },
+    "contrasts": {
+      "A-C": {
+        "point": 0.0720347271040987,
+        "ci": [
+          0.05544031491542933,
+          0.08909011078179584
+        ]
+      },
+      "B-D": {
+        "point": 0.036055919209056986,
+        "ci": [
+          0.019083826430208995,
+          0.05315785184267327
+        ]
+      },
+      "A-B": {
+        "point": 0.034739919372798245,
+        "ci": [
+          0.025837421261078426,
+          0.04413340677567223
+        ]
+      },
+      "C-D": {
+        "point": -0.0012388885222434677,
+        "ci": [
+          -0.010548401071948528,
+          0.00809982708697936
+        ]
+      }
+    }
+  },
+  "row_pooled": {
+    "n_passages": 1132,
+    "n_rows": 4800,
+    "estimand": "row_pooled",
+    "bootstrap_unit": "passage",
+    "bootstrap_replicates": 10000,
+    "bootstrap_seed": 0,
+    "task_order": [
+      "squad",
+      "drop",
+      "ropes",
+      "pwc"
+    ],
+    "n_passages_per_task": {
+      "squad": 367,
+      "drop": 256,
+      "ropes": 169,
+      "pwc": 340
+    },
+    "uncertainty_scope": "sampling passages conditional on fixed fits, action seeds and MC draws",
+    "cells": {
+      "A": {
+        "selected_minus_base": {
+          "point": 0.0634004040136279,
+          "ci": [
+            0.050795310054614615,
+            0.07638601709377517
+          ]
+        },
+        "selected_minus_random": {
+          "point": 0.07968910362900423,
+          "ci": [
+            0.070113659136495,
+            0.08951372353562359
+          ]
+        }
+      },
+      "B": {
+        "selected_minus_base": {
+          "point": 0.028459804159846593,
+          "ci": [
+            0.01659835282120113,
+            0.041004430509201314
+          ]
+        },
+        "selected_minus_random": {
+          "point": 0.04254997799906055,
+          "ci": [
+            0.033499988676429435,
+            0.05203796381982846
+          ]
+        }
+      },
+      "C": {
+        "selected_minus_base": {
+          "point": -0.008739398646250751,
+          "ci": [
+            -0.01883703378498467,
+            0.0012504915840964644
+          ]
+        },
+        "selected_minus_random": {
+          "point": -0.0001994531061923644,
+          "ci": [
+            -0.005419960764526001,
+            0.005021471995363022
+          ]
+        }
+      },
+      "D": {
+        "selected_minus_base": {
+          "point": -0.007195025994823206,
+          "ci": [
+            -0.01898195853209244,
+            0.004132761983920057
+          ]
+        },
+        "selected_minus_random": {
+          "point": 0.0027291805482144364,
+          "ci": [
+            -0.004213766199855341,
+            0.009718341000493687
+          ]
+        }
+      }
+    },
+    "contrasts": {
+      "A-C": {
+        "point": 0.07213980265987865,
+        "ci": [
+          0.05572865022800823,
+          0.08848110865310961
+        ]
+      },
+      "B-D": {
+        "point": 0.035654830154669796,
+        "ci": [
+          0.019317680391554633,
+          0.05216818687938819
+        ]
+      },
+      "A-B": {
+        "point": 0.034940599853781305,
+        "ci": [
+          0.02587572668131121,
+          0.04414122034328061
+        ]
+      },
+      "C-D": {
+        "point": -0.0015443726514275452,
+        "ci": [
+          -0.010853248082397578,
+          0.007789216651359374
+        ]
+      }
+    }
+  },
+  "source": {
+    "logical_artifact": "factorial_predictions/predictions.json",
+    "sha256": "88f4b94d25c4abf90b0ff4550bd5446054672164c9964ff46ffd80d982ad0550"
+  }
+}

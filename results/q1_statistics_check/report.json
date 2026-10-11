@@ -1,0 +1,12 @@
+{
+  "qwen": {
+    "status": "pass",
+    "tolerance": 1e-12,
+    "differences": []
+  },
+  "gemma": {
+    "status": "pass",
+    "tolerance": 1e-12,
+    "differences": []
+  }
+}

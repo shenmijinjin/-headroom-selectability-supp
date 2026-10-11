@@ -1,66 +1,59 @@
-# Headroom Is Not Selectability: anonymous supplementary material
+# Headroom Is Not Selectability: supplementary analyses
 
 Anonymized archive: https://anonymous.4open.science/r/-headroom-selectability-supp-8BDE/
 
-**This archive is the supplementary material for the submission, not the paper itself.** The paper
-PDF is submitted separately through the review system; what is published here is everything a
-reviewer needs to verify it: the analysis and plotting code, and the small result summaries needed
-to check every table and figure. Every script resolves its input and
-output directories from the environment variables `RESULTS_DIR`, `SCRIPTS_DIR` and `SFA_DIR`
-(defaults `results/`, `scripts/`, `sfa/` relative to the working directory); see `MANIFEST.md` for
-what each script consumes and produces. The bundled `results/` directory satisfies `RESULTS_DIR`
-for all consistency, permutation-null and query-count analyses. Scripts that retrain a critic or
-selector (the passage-disjoint P3 and factorial runs, the selector-capacity control) additionally
-need the raw candidate-reward pools and the writer's mu tokens, which are referenced by path
-(`SCRIPTS_DIR`/`SFA_DIR`) because of their size; their reported outputs are already bundled and the
-cross-check scripts verify the paper's numbers against them directly.
+This package contains analysis code, scalar candidate rewards, and result summaries. The paper is submitted separately. `MANIFEST.md` distinguishes analyses that can be recomputed from this package from reported results whose original predictions are required. It does not claim that every paper result can be independently reconstructed from the bundled data.
 
-All experiments use frozen candidate pools; no script here retrains a writer. Selector/critic
-training is critic-level (minutes per run).
+## What can be verified here
 
-## Layout
+- Query-consistency and held-out-query selection, using the eight `results/e2_perquery/` files.
+- The paired permutation null, with 200 permutations per passage.
+- The matched one-versus-two-selection-query control. Its confidence intervals average the 20 query partitions within each passage and then resample passages. Monte Carlo repetitions are not independent observations.
+- Figures generated directly from JSON, with source hashes recorded in `figure_provenance.json`.
 
-- `analysis/` — every reported analysis:
-  - `r41_g4_passage.py`, `r41_g4_passage_gemma.py` — passage-disjoint P3 (Qwen / Gemma).
-  - `r41_factorial_passage.py` — passage-disjoint 2x2 factorial decomposition (both writers).
-  - `r41_factorial_ci.py` — passage-clustered bootstrap CIs for the factorial cells and contrasts
-    (Appendix G numbers).
-  - `r8_q1_consistency.py` — held-out-query selection gain, query-response consistency C(c),
-    context-level oracle, 20-split replicates.
-  - `fig2a_recompute.py` — recomputes every value in the consistency figure from the per-query
-    artifacts and cross-checks against the frozen summary (max abs diff reported).
-  - `r8_canon_p3.py` — canonicalised-P3 matched diagnostic (native vs SVD-canonical gate).
-  - `r8_sel_matrix.py` — selector capacity control (2-layer vs 4-layer).
-  - `r42_permnull.py` — permutation null for the observed-query aggregate oracle.
-  - `r42_querycount.py` — selection gain vs number of visible queries.
-  - `beautify_figs.py` — regenerates all paper figures from the frozen artifacts.
-- `MANIFEST.md` — the result-correspondence table: every figure/table mapped to its source
-  artifact, script, split, and bootstrap definition, plus the frozen protocol constants.
-- `results/` — the small result summaries (aggregated numbers only, no raw dataset text) needed to
-  verify every core table and the two supplementary analyses:
-  - `q1_query_consistency/{qwen,gemma}.json` — frozen summaries for the consistency figure/tables.
-  - `perm_null/report.json` — permutation-null results (Appendix N).
-  - `query_count/report.json` — query-count results (Appendix on visible queries).
-  - `g4_passage_*/report.json` — passage-disjoint P3 reports (context-conditioned and
-    context-free selectors, both writers).
-  - `canon_p3/report.json`, `canon_p3/wdisplacement_squad.json` — canonicalised-P3 diagnostic.
-  - `e2_perquery/{writer}_{task}_s42.json` — per-query candidate rewards (candidate indices and
-    scalar rewards only), the input to `r8_q1_consistency.py` and `fig2a_recompute.py`.
-  - The raw factorial cell dumps (`e1_factorial_passage_*/report.json`, 20-40 MB of per-row gains)
-    are omitted for size; the factorial table and its CIs are reproducible from those dumps with
-    `r41_factorial_ci.py`, and the reported values are also printed by the cross-check scripts.
+P3 raw per-row predictions are bundled under `results/g4_passage_{qwen,gemma}[_ctxfree]/predictions.json` (restored 2026-10-11), together with their passage-clustered bootstrap summaries. The manuscript points and intervals can be recomputed exactly from these records with `analysis/p3_statistics.py`. Factorial raw cell predictions are bundled under `results/factorial_statistics/`, with shared passage resampling across cells and contrasts via `analysis/r41_factorial_ci.py`. The pre-restoration scalar-only P3 reports are kept under `results/legacy_reports/` for audit continuity; they are superseded and are not used by the manuscript.
 
-## Reproduction
+All intervals are percentile passage-clustered bootstrap intervals conditional on the fixed models, action seeds, and query partitions. They do not include writer-training uncertainty. P3 and factorial inference first aligns and averages the fixed critic initializations, then applies shared passage resampling weights. Task-equal and pooled estimands are distinct and explicitly named.
 
-1. Set `RESULTS_DIR` to the bundled `results/` directory (this is already the default if you run
-   from the repository root, where `results/` sits next to `analysis/`).
-2. Run any script in `analysis/`; each prints the numbers that appear in the paper and, where a
-   frozen summary exists in `results/`, the cross-check difference. The three analyses that run
-   end-to-end on the bundled data alone are `fig2a_recompute.py` (consistency figure), `r42_permnull.py`
-   (permutation null) and `r42_querycount.py` (visible-query count); all three reproduce their
-   frozen reports exactly.
-3. Figures: `python analysis/beautify_figs.py` regenerates `fig_qconsist.pdf` and
-   `fig_e1e4_combined.pdf` from the frozen summaries (its data is hardcoded from those artifacts,
-   so it needs no `RESULTS_DIR`).
+## Reproduce the bundled analyses
 
-Resource expectations: all analysis scripts are CPU-only and finish in seconds to minutes.
+Run from the package root with Python 3.10 or later. Install the lightweight dependencies:
+
+```sh
+python -m pip install -r requirements-analysis.txt
+export RESULTS_DIR="$PWD/results"
+python analysis/r8_q1_consistency.py qwen
+python analysis/r8_q1_consistency.py gemma
+python analysis/r42_permnull.py
+python analysis/r42_querycount.py
+python analysis/fig2a_recompute.py
+python analysis/beautify_figs.py --results-dir "$RESULTS_DIR" --output-dir figures
+python analysis/build_paper_summary.py
+python analysis/r41_factorial_ci.py
+python -m unittest discover -s analysis -p 'test_*.py' -v
+```
+
+The analysis commands regenerate reports. Preserve a copy of the input release if you want to compare reports byte-for-byte. `fig2a_recompute.py` is a historical filename for the consistency check of the **query-consistency figure (`fig:qconsist`)**, not the factorial figure. The plot script also works from any directory when given explicit paths. It produces vector PDFs, PNG previews, and a source-hash manifest; it does not hardcode paper point estimates or require TeX/PyMuPDF.
+
+## Analyses requiring additional inputs
+
+`r41_g4_passage.py`, `r41_g4_passage_gemma.py`, `r41_factorial_passage.py`, `r8_canon_p3.py`, and `r8_sel_matrix.py` require PyTorch and the original candidate pools and writer memory tokens. Set `RESULTS_DIR`, `SCRIPTS_DIR`, and `SFA_DIR` to the corresponding data directories. These programs fit selectors; they do not retrain a writer. Their resource needs depend on the supplied pools and available hardware, so this package does not promise CPU-only or seconds-long reproduction of these experiments.
+
+`p3_statistics.py --raw predictions.json` provides standalone CPU P3 inference from exported rows.
+
+`r41_factorial_ci.py` consumes the raw prediction records saved by the repaired factorial generator. It must not be run against summary-only means to invent uncertainty. Prediction identity is `(task, passage_id, row, action_seed)` within each cell and initialization. Missing, duplicated, or unaligned records should fail explicitly.
+
+## Layout and release scope
+
+- `analysis/`: analysis and plotting programs, including shared cluster-bootstrap utilities.
+- `analysis/test_statistics.py`: regression checks for weighting, initialization alignment, and resampling units.
+- `results/e2_perquery/`: rewards and candidate indices, without dataset question/passage text.
+- `results/q1_query_consistency/`, `results/perm_null/`, `results/query_count/`: locally reproducible corrected reports.
+- `results/paper_summary.json`: manuscript-facing points and verification status, when generated by the release audit.
+- `results/g4_passage_{qwen,gemma}[_ctxfree]/`: restored raw per-row P3 predictions, bootstrap summaries, and run reports.
+- `results/factorial_statistics/`: restored raw factorial cell predictions and their shared-draw bootstrap CIs.
+- `results/legacy_reports/`: superseded pre-restoration scalar-only P3 reports, retained for audit continuity only.
+- `results/canon_p3/`: retained small canonicalization diagnostic, distinct from the full P3 protocol.
+- `results/figures/`: scalar pairwise-ranking data and a clearly marked legacy row-split factorial file. The latter is not used by current figures.
+
+No model weights, private server paths, or dataset text are needed for the bundled numerical analyses. The anonymous public mirror is a separate release operation; check its contents against this package's file hashes before citing it as the updated release.

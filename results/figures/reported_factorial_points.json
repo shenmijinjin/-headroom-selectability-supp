@@ -1,0 +1,13 @@
+{
+  "status": "reported_points_only_not_raw_recomputed",
+  "source": "retained passage-half table in the prior manuscript snapshot",
+  "split": {"seen_passages": 566, "unseen_passages": 566},
+  "initializations": [0, 1, 2],
+  "cell_definition": {"A": "seen passages / seen actions", "B": "seen passages / unseen actions", "C": "unseen passages / seen actions", "D": "unseen passages / unseen actions"},
+  "estimand_status": "original pooling must be verified against raw predictions before new inference",
+  "precision": "retained rounded three-decimal means",
+  "qwen": {"A": 0.035, "B": 0.015, "C": 0.001, "D": 0.002},
+  "gemma": {"A": 0.059, "B": 0.033, "C": -0.007, "D": -0.002},
+  "confidence_intervals": null,
+  "raw_predictions_bundled": false
+}

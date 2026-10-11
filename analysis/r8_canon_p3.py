@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """R8 Q2 (fixed): canonicalized-action P3 vs native-gate P3 on the E4 shared-action subset.
 
-delta_r in both files is ALREADY relative to baseline (verified: mean native +0.008, canon -0.024).
-The SAME (task, row) pair must stay in ONE split across all four tasks; we split on the 24 shared
+This driver expects delta_r in both input files to be relative to the unperturbed baseline.
+The SAME (task, row) pair must stay in ONE split across all four tasks; we split on the shared
 row ids (rng=0 thirds), then take every task's context at that row into the same partition.
+This shared-row diagnostic does not establish passage-disjoint deployment: the
+retained landscape schema lacks a passage ID. No passage CI is fabricated.
 Critic input = mu tokens + gate-deviation of the 8-d action. Metric = selected - baseline.
 Native vs canonical differ ONLY in which reward matrix the critic trains/evaluates on.
 """
-import json, os, os
+import json, os
 import numpy as np
 import torch, torch.nn as nn, torch.nn.functional as F
 
@@ -121,27 +123,29 @@ def run_arm_split(cells, tr_rows, tr_act, dv_rows, dv_act, te_rows, te_act, devi
     te_sel, te_gate, te_all = eval_sel(te, te_act)
     mask = te_gate > best_thr
     te_gated = np.where(mask, te_sel, 0.0)
-    rng = np.random.default_rng(0)
-    def ci(x):
-        n = len(x)
-        if n < 3: return [float("nan"), float("nan")]
-        b = x[rng.integers(0, n, (10000, n))].mean(1)
-        return [float(np.quantile(b, .025)), float(np.quantile(b, .975))]
-    return dict(sel=float(te_sel.mean()), ci_sel=ci(te_sel), gated=float(te_gated.mean()),
-                ci_gated=ci(te_gated), oracle=float(te_all.max(1).mean()),
-                random=float(te_all.mean()), coverage=float(mask.mean()), n_test=len(te),
+    predictions = [dict(task=e["task"], row=int(e["row"]), selected=float(te_sel[i]),
+                        gated=float(te_gated[i]), oracle=float(te_all[i].max()),
+                        random=float(te_all[i].mean()), coverage=float(mask[i]))
+                   for i, e in enumerate(te)]
+    return dict(sel=float(te_sel.mean()), ci_sel=None, gated=float(te_gated.mean()),
+                ci_gated=None, ci_status="passage identity unavailable; shared-row diagnostic only",
+                oracle=float(te_all.max(1).mean()), random=float(te_all.mean()),
+                coverage=float(mask.mean()), n_test=len(te), predictions=predictions,
                 per_task={t: float(np.mean([te_sel[i] for i, e in enumerate(te) if e["task"] == t]))
                           for t in TASKS})
 
 
-_d = json.load(open("%s/e4_landscape/qwen_squad.json" % BASE))
-ACTIONS = [np.asarray(a, dtype=np.float32) for a in _d["shared_actions"]]
+
+ACTIONS = None
 
 
 def main():
+    global ACTIONS
+    data = json.load(open("%s/e4_landscape/qwen_squad.json" % BASE))
+    ACTIONS = [np.asarray(a, dtype=np.float32) for a in data["shared_actions"]]
     device = "cuda" if torch.cuda.is_available() else "cpu"
     native = load_cells("native"); canon = load_cells("canon")
-    # split on the 24 shared row ids; same row -> same split across all tasks
+    # split on the shared row ids; same row -> same split across all tasks
     rows = sorted({e["row"] for e in native})
     rng = np.random.default_rng(0); perm = rng.permutation(len(rows))
     n = len(rows); a1, a2 = n // 3, 2 * n // 3
@@ -152,7 +156,10 @@ def main():
           sum(1 for e in native if e["row"] in tr_rows),
           sum(1 for e in native if e["row"] in dv_rows),
           sum(1 for e in native if e["row"] in te_rows))
-    results = {"meta": dict(n_rows=len(rows), n_test_entries=sum(1 for e in native if e["row"] in te_rows),
+    results = {"meta": dict(schema_version=2, split_unit="shared row id across tasks (passage identity not available)",
+                            bootstrap_status="none; no passage sampling CI inferred",
+                            training_numpy_shuffle="legacy global NumPy RNG, not explicitly seeded",
+                            n_rows=len(rows), n_test_entries=sum(1 for e in native if e["row"] in te_rows),
                             tr_act=tr_act, dv_act=dv_act, te_act=te_act)}
     for kind, cells in [("native", native), ("canon", canon)]:
         cells_r = [run_arm_split(cells, tr_rows, tr_act, dv_rows, dv_act, te_rows, te_act, device, init)
@@ -167,7 +174,13 @@ def main():
     results["paired_canon_minus_native"] = [float(d) for d in diffs]
     out = os.path.join(os.environ.get("RESULTS_DIR", "results"), "canon_p3", "report.json")
     os.makedirs(os.path.dirname(out), exist_ok=True)
-    json.dump(results, open(out, "w"), indent=2)
+    raw = {"meta": results["meta"], "arms": {}}
+    for kind in ["native", "canon"]:
+        raw["arms"][kind] = [{"init": i, "rows": cell.pop("predictions")} for i, cell in enumerate(results[kind])]
+    raw_path = os.path.join(os.path.dirname(out), "predictions.json")
+    json.dump(raw, open(raw_path, "w"), indent=2, allow_nan=False)
+    results["meta"]["init_predictions_file"] = "predictions.json"
+    json.dump(results, open(out, "w"), indent=2, allow_nan=False)
     print("WROTE", out)
 
 

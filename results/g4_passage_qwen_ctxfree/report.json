@@ -23,131 +23,527 @@
     ],
     "n_train": 1563,
     "n_dev": 1106,
-    "n_test": 1578
+    "n_test": 1578,
+    "writer": "qwen",
+    "schema_version": 2,
+    "passage_identity": "exact stored context equality within writer/task",
+    "split_rng_seed": 0,
+    "primary_estimand": "task_equal_row",
+    "gate_dev_objective": "row_pooled",
+    "gate_candidate_coverages": [
+      0.3,
+      0.4,
+      0.5,
+      0.6,
+      0.7
+    ],
+    "critic": {
+      "d_hidden": 256,
+      "n_layers": 2
+    },
+    "epochs": 20,
+    "init_seeds": [
+      0,
+      1,
+      2
+    ],
+    "source_files_sha256": {
+      "reward_pool/squad/seed42": "56b24219c493a1acd021d78ae9809a3f90c2ca014908c81537d56dab1f1ad6cb",
+      "action_pool/squad/seed42": "88b2f9270d04201e922269e220fc66820582caccfb83e0372a9077e167a73d4f",
+      "reward_pool/drop/seed42": "70739a13885007dfaaa575a79a063a4878124a89c87d7dbc3a8721dc4e1cc8c0",
+      "action_pool/drop/seed42": "88b2f9270d04201e922269e220fc66820582caccfb83e0372a9077e167a73d4f",
+      "reward_pool/ropes/seed42": "dcf97ee62652421d864706bdf1a1ac3e44563ae48a13f7771de14f534a7bd3aa",
+      "action_pool/ropes/seed42": "88b2f9270d04201e922269e220fc66820582caccfb83e0372a9077e167a73d4f",
+      "reward_pool/pwc/seed42": "07702c933decbb603d66d53fd6474832c703a9c4c1e85eb3377c2c8c26a1ad14",
+      "action_pool/pwc/seed42": "88b2f9270d04201e922269e220fc66820582caccfb83e0372a9077e167a73d4f",
+      "reward_pool/squad/seed43": "6b34f4ed626420c1b4ad54d3b8cf91e2d2fcc0d26820eff4b43012f7bddd1538",
+      "action_pool/squad/seed43": "81ee6e116a39fb90d00255ae6ff3b373c37f94899d9622884b702112bf0681ce",
+      "reward_pool/drop/seed43": "299d051d6b8c8c6173388fb86a1748e1bdeba107351e50e992cc9dee062d8e3b",
+      "action_pool/drop/seed43": "81ee6e116a39fb90d00255ae6ff3b373c37f94899d9622884b702112bf0681ce",
+      "reward_pool/ropes/seed43": "611c588c217f748bd2be3b5dd89144c17f1926d1961d9a83a76ab05a594f629b",
+      "action_pool/ropes/seed43": "81ee6e116a39fb90d00255ae6ff3b373c37f94899d9622884b702112bf0681ce",
+      "reward_pool/pwc/seed43": "664e4914e5f6175a918360911d5b52f93eeaa03e2569c48d926ec17deb219561",
+      "action_pool/pwc/seed43": "81ee6e116a39fb90d00255ae6ff3b373c37f94899d9622884b702112bf0681ce",
+      "reward_pool/squad/seed44": "f8f01e31cb554d8714c04cc558fbcc27f9ddfb381e3c959247184d5c165f7b1f",
+      "action_pool/squad/seed44": "cf71df8b284d8a59beaf222557372c3e933d3e8f2b7b113a8d9ce279aab6d790",
+      "reward_pool/drop/seed44": "034cde14aae2278d5c7a5807b56dd130a5c5961c566f6f844f43539b96571557",
+      "action_pool/drop/seed44": "cf71df8b284d8a59beaf222557372c3e933d3e8f2b7b113a8d9ce279aab6d790",
+      "reward_pool/ropes/seed44": "107cfed8cb0e9a68c1c17cae74bc63f556f3358995af01f79666530d6564a18c",
+      "action_pool/ropes/seed44": "cf71df8b284d8a59beaf222557372c3e933d3e8f2b7b113a8d9ce279aab6d790",
+      "reward_pool/pwc/seed44": "6dfe3560be9a2c3d6808eb4f96222432c2a319211a15f2b2fc1587cbb73a496b",
+      "action_pool/pwc/seed44": "cf71df8b284d8a59beaf222557372c3e933d3e8f2b7b113a8d9ce279aab6d790",
+      "reward_pool/squad/seed45": "ec5ce4415d004ecacdcaee86708529a5f94fd7a52ff7ed165a2cf895ecc8515c",
+      "action_pool/squad/seed45": "e08476fd4814e8c83e692cdfebd28bf3e85b1375c8c111b09a532f4e76e78468",
+      "reward_pool/drop/seed45": "bdf13abe26383b8f92dec49c19592057fec1a3386c0894634a2e3819b861e1c8",
+      "action_pool/drop/seed45": "e08476fd4814e8c83e692cdfebd28bf3e85b1375c8c111b09a532f4e76e78468",
+      "reward_pool/ropes/seed45": "9c089f2e82d849fe2d7b9954247d8b11a34fae5030fc5e11016319908ab26a14",
+      "action_pool/ropes/seed45": "e08476fd4814e8c83e692cdfebd28bf3e85b1375c8c111b09a532f4e76e78468",
+      "reward_pool/pwc/seed45": "9994b36398a7ca6acc56898b922d643305cd45bf84068179964ba3f275c1a6ca",
+      "action_pool/pwc/seed45": "e08476fd4814e8c83e692cdfebd28bf3e85b1375c8c111b09a532f4e76e78468",
+      "reward_pool/squad/seed46": "44706ac41079c708d0165281975de06da9f1179fb8e27245e55c8166362df90d",
+      "action_pool/squad/seed46": "11a696d7b978b7363e36098d85ed6e7fa114f94c7213258e13ec0e15ba0ccf0b",
+      "reward_pool/drop/seed46": "d3ce965dbe41d468f0d6e418c354c6f94e32d8cc12288ff3150f780a86c9ceeb",
+      "action_pool/drop/seed46": "11a696d7b978b7363e36098d85ed6e7fa114f94c7213258e13ec0e15ba0ccf0b",
+      "reward_pool/ropes/seed46": "ff9e6fa21dd9b022670488c20c22fb1c715c04f124ed435bb2704cb3bcb25b39",
+      "action_pool/ropes/seed46": "11a696d7b978b7363e36098d85ed6e7fa114f94c7213258e13ec0e15ba0ccf0b",
+      "reward_pool/pwc/seed46": "617f338755ce1e41c33637854667dd296c02ce529c465a391d22cc6b815acba5",
+      "action_pool/pwc/seed46": "11a696d7b978b7363e36098d85ed6e7fa114f94c7213258e13ec0e15ba0ccf0b",
+      "reward_pool/squad/seed47": "e7f7df9bc7848a65b22addff6dc63e57c7740d248e33ee3b7d11114696757fce",
+      "action_pool/squad/seed47": "52341687c96f2d6b8a1b32a35c36864b2905be0af0013c06d338b405d55830e7",
+      "reward_pool/drop/seed47": "86fe37f0dea2f13cb6d7653d01038bb6d7e6cdf5f06dbfdc2a5b1a7ebb040fe8",
+      "action_pool/drop/seed47": "52341687c96f2d6b8a1b32a35c36864b2905be0af0013c06d338b405d55830e7",
+      "reward_pool/ropes/seed47": "cf0b46127b00506d7deb953b19c5fd1eb5aadec186d22804b2fb2364dcdec898",
+      "action_pool/ropes/seed47": "52341687c96f2d6b8a1b32a35c36864b2905be0af0013c06d338b405d55830e7",
+      "reward_pool/pwc/seed47": "1e847ae021c556fae94420b51e733526d82ae417885979f3b6fca46219bbd511",
+      "action_pool/pwc/seed47": "52341687c96f2d6b8a1b32a35c36864b2905be0af0013c06d338b405d55830e7",
+      "reward_pool/squad/seed48": "864959e0fc94535ce74cba48bcb6d8c118bde59548b733673e25e1ce5abf5307",
+      "action_pool/squad/seed48": "79ba929e600c1db9cc9e86f84ff600d30bb461d6844be78bab6d3363607dc6dc",
+      "reward_pool/drop/seed48": "93bd34a681878dd2fbc2d266f333c6dc10863d24ae3c9821f022e6a3cdbd382c",
+      "action_pool/drop/seed48": "79ba929e600c1db9cc9e86f84ff600d30bb461d6844be78bab6d3363607dc6dc",
+      "reward_pool/ropes/seed48": "fc9ff0135a7246ce28d1f9059dfca5fc9147ee6a7d7f452c7506be13bd043d17",
+      "action_pool/ropes/seed48": "79ba929e600c1db9cc9e86f84ff600d30bb461d6844be78bab6d3363607dc6dc",
+      "reward_pool/pwc/seed48": "4c03296cb24db141278275fc01d9fd477413e4ea1184164108ec1d8de0aec96e",
+      "action_pool/pwc/seed48": "79ba929e600c1db9cc9e86f84ff600d30bb461d6844be78bab6d3363607dc6dc",
+      "reward_pool/squad/seed49": "6dd5878d93394f40e9aafe8637cbd37b54f7e7e4333a33f164a361b96949f579",
+      "action_pool/squad/seed49": "380259aa88aa99285d2521f0359daf4949b835173592d035b60cf8774bd92148",
+      "reward_pool/drop/seed49": "f706ab43f53288dc861cbccf9ddbecc3f563f551b314cad7fb50112d8b507418",
+      "action_pool/drop/seed49": "380259aa88aa99285d2521f0359daf4949b835173592d035b60cf8774bd92148",
+      "reward_pool/ropes/seed49": "99082230fc9e2023385104e0577c6c9dde4c5cd7d23f441de0370d8ee7d592f2",
+      "action_pool/ropes/seed49": "380259aa88aa99285d2521f0359daf4949b835173592d035b60cf8774bd92148",
+      "reward_pool/pwc/seed49": "de3eb09e27efdf315bfa7dcaaa871428da4d37640a17343a1ceeca7ab9804974",
+      "action_pool/pwc/seed49": "380259aa88aa99285d2521f0359daf4949b835173592d035b60cf8774bd92148",
+      "mu_tokens/squad": "4b8ba2502e7997cd532f1db81dadd3199048dd3cb747b1d0624810d3e5e03744",
+      "mu_tokens/drop": "515773d25f4dada7d5dd27bce1aa057a183e82a363395177d0a8b038d345855f",
+      "mu_tokens/ropes": "f71735c2c21ff4add975a0547c9d393960b4f8cb3086ae348c36abaacc3c88da",
+      "mu_tokens/pwc": "fa0dd3d93199f57759f1a48609cea69e1e8919058c628bbfe27ede5b7f8d0865"
+    },
+    "metric_definitions": "selected/gated/random/oracle are reward deltas relative to per-row baseline; selected_action_index indexes the source candidate pool",
+    "init_predictions_file": "predictions.json"
   },
   "init_cells": [
     {
       "init": 0,
-      "sel": 0.002716935324129685,
-      "ci_sel_passage": [
-        -0.011864435484907702,
-        0.00690810412027723
-      ],
-      "gated": 0.0016836084358167512,
-      "ci_gated_passage": [
-        -0.00546477253873614,
-        0.004274324874729267
-      ],
-      "random": -0.0029510454497806474,
-      "oracle": 0.05868509057578743,
-      "coverage": 0.3238276299112801,
+      "gate_threshold": 0.03135921433568001,
+      "gate_dev_net": 0.00164248785812401,
+      "task_equal_row": {
+        "selected": 0.0032615797382423407,
+        "gated": 0.002911176800335374,
+        "random": -0.003074720934961627,
+        "oracle": 0.05917090228916616,
+        "coverage": 0.4219934435872198
+      },
+      "row_pooled": {
+        "selected": 0.0031533077995426224,
+        "gated": 0.0027715874209065174,
+        "random": -0.0029510454497806474,
+        "oracle": 0.05868509057578743,
+        "coverage": 0.42141951837769326
+      },
       "per_task": {
-        "squad": -0.018919221183593033,
-        "drop": 0.0027934379661562797,
-        "ropes": 0.03552889167306521,
-        "pwc": -0.008526641438066057
-      },
-      "per_task_ci": {
-        "squad": [
-          -0.039506385778465,
-          -0.00028079929865068863
-        ],
-        "drop": [
-          -0.008403039351545481,
-          0.010983857224681003
-        ],
-        "ropes": [
-          0.0109549420788036,
-          0.07143502805810717
-        ],
-        "pwc": [
-          -0.022844661824383942,
-          0.007209528634640652
-        ]
-      },
-      "n_test_passages": 378
+        "squad": {
+          "selected": -0.01768447853483482,
+          "gated": -0.00823508676515039,
+          "random": -0.011703736071795387,
+          "oracle": 0.05654178627420893,
+          "coverage": 0.4092140921409214
+        },
+        "drop": {
+          "selected": 0.0006634986220762647,
+          "gated": -0.0007091031163588338,
+          "random": 0.001229143278919503,
+          "oracle": 0.04608995149276037,
+          "coverage": 0.3954022988505747
+        },
+        "ropes": {
+          "selected": 0.038543331355506937,
+          "gated": 0.024023967925656253,
+          "random": 0.008351623366165552,
+          "oracle": 0.0773620097922585,
+          "coverage": 0.43386243386243384
+        },
+        "pwc": {
+          "selected": -0.008476032489779019,
+          "gated": -0.0034350708428055347,
+          "random": -0.010175914313136176,
+          "oracle": 0.056689861597436844,
+          "coverage": 0.4494949494949495
+        }
+      }
     },
     {
       "init": 1,
-      "sel": 0.0022579578574184983,
-      "ci_sel_passage": [
-        -0.010759920093084718,
-        0.006874591649851065
-      ],
-      "gated": 0.0011087517095883159,
-      "ci_gated_passage": [
-        -0.007217777818761687,
-        0.004326513417616488
-      ],
-      "random": -0.0029510454497806474,
-      "oracle": 0.05868509057578743,
-      "coverage": 0.3523447401774398,
+      "gate_threshold": 0.02720423974096775,
+      "gate_dev_net": 0.0008979532884511336,
+      "task_equal_row": {
+        "selected": 0.00244001660402544,
+        "gated": 0.00014589121164013878,
+        "random": -0.003074720934961627,
+        "oracle": 0.05917090228916616,
+        "coverage": 0.3298332154093298
+      },
+      "row_pooled": {
+        "selected": 0.0024389133107563994,
+        "gated": 6.179020625594601e-05,
+        "random": -0.0029510454497806474,
+        "oracle": 0.05868509057578743,
+        "coverage": 0.33079847908745247
+      },
       "per_task": {
-        "squad": -0.019943312471757735,
-        "drop": 0.003367032466092329,
-        "ropes": 0.03281355696538138,
-        "pwc": -0.007439504683281135
-      },
-      "per_task_ci": {
-        "squad": [
-          -0.04094403281769095,
-          -0.0011969396854854327
-        ],
-        "drop": [
-          -0.00532639197863489,
-          0.01160136216447148
-        ],
-        "ropes": [
-          0.01391710399734115,
-          0.06812317839085441
-        ],
-        "pwc": [
-          -0.018234808598589596,
-          0.0065408584306299224
-        ]
-      },
-      "n_test_passages": 378
+        "squad": {
+          "selected": -0.022555303378762593,
+          "gated": -0.01119049640528878,
+          "random": -0.011703736071795387,
+          "oracle": 0.05654178627420893,
+          "coverage": 0.3062330623306233
+        },
+        "drop": {
+          "selected": 0.002714595883742146,
+          "gated": -0.002310950583082506,
+          "random": 0.001229143278919503,
+          "oracle": 0.04608995149276037,
+          "coverage": 0.35172413793103446
+        },
+        "ropes": {
+          "selected": 0.040624640394179595,
+          "gated": 0.019200170220481972,
+          "random": 0.008351623366165552,
+          "oracle": 0.0773620097922585,
+          "coverage": 0.328042328042328
+        },
+        "pwc": {
+          "selected": -0.011023866483057388,
+          "gated": -0.0051151583855501325,
+          "random": -0.010175914313136176,
+          "oracle": 0.056689861597436844,
+          "coverage": 0.3333333333333333
+        }
+      }
     },
     {
       "init": 2,
-      "sel": 0.001555003502603304,
-      "ci_sel_passage": [
-        -0.010439150979728582,
-        0.006300027087302895
-      ],
-      "gated": -0.00013620547208986958,
-      "ci_gated_passage": [
-        -0.005779236429593368,
-        0.0019192134706268716
-      ],
-      "random": -0.0029510454497806474,
-      "oracle": 0.05868509057578743,
-      "coverage": 0.41634980988593157,
+      "gate_threshold": 0.022884946316480637,
+      "gate_dev_net": -0.002010310573964826,
+      "task_equal_row": {
+        "selected": 0.0027762780523101984,
+        "gated": 0.0029612550427167987,
+        "random": -0.003074720934961627,
+        "oracle": 0.05917090228916616,
+        "coverage": 0.44168267641774794
+      },
+      "row_pooled": {
+        "selected": 0.0028609206076092896,
+        "gated": 0.002991696132089664,
+        "random": -0.0029510454497806474,
+        "oracle": 0.05868509057578743,
+        "coverage": 0.4404309252217998
+      },
       "per_task": {
-        "squad": -0.014116820750561187,
-        "drop": -0.0001929526313625533,
-        "ropes": 0.028001947232359457,
-        "pwc": -0.007166412310919377
-      },
-      "per_task_ci": {
-        "squad": [
-          -0.03052577030857921,
-          0.0009373525552089423
-        ],
-        "drop": [
-          -0.008080861836591343,
-          0.009145108354979274
-        ],
-        "ropes": [
-          0.0003451514978512442,
-          0.0632604060476527
-        ],
-        "pwc": [
-          -0.01991892082067872,
-          0.006321762206258309
-        ]
-      },
-      "n_test_passages": 378
+        "squad": {
+          "selected": -0.019682568995165954,
+          "gated": -0.012123086522547856,
+          "random": -0.011703736071795387,
+          "oracle": 0.05654178627420893,
+          "coverage": 0.45528455284552843
+        },
+        "drop": {
+          "selected": 0.0050801174736571034,
+          "gated": 0.002743989370506385,
+          "random": 0.001229143278919503,
+          "oracle": 0.04608995149276037,
+          "coverage": 0.4114942528735632
+        },
+        "ropes": {
+          "selected": 0.03403587002188913,
+          "gated": 0.022448356265803337,
+          "random": 0.008351623366165552,
+          "oracle": 0.0773620097922585,
+          "coverage": 0.4656084656084656
+        },
+        "pwc": {
+          "selected": -0.008328306291139486,
+          "gated": -0.0012242389428946707,
+          "random": -0.010175914313136176,
+          "oracle": 0.056689861597436844,
+          "coverage": 0.43434343434343436
+        }
+      }
     }
-  ]
+  ],
+  "aggregate": {
+    "n_fixed_inits": 3,
+    "metrics": [
+      "selected",
+      "gated",
+      "random",
+      "oracle",
+      "coverage"
+    ],
+    "init_aggregation": "align identities and average predictions before resampling",
+    "task_equal_row": {
+      "n_passages": 378,
+      "n_rows": 1578,
+      "estimand": "task_equal_row",
+      "bootstrap_unit": "passage",
+      "bootstrap_replicates": 10000,
+      "bootstrap_seed": 0,
+      "task_order": [
+        "squad",
+        "drop",
+        "ropes",
+        "pwc"
+      ],
+      "n_passages_per_task": {
+        "squad": 120,
+        "drop": 90,
+        "ropes": 56,
+        "pwc": 112
+      },
+      "uncertainty_scope": "sampling passages conditional on fixed fits, action seeds and MC draws",
+      "metrics": {
+        "selected": {
+          "point": 0.00282595813152599,
+          "ci": [
+            -0.005297472327345822,
+            0.012142920817327938
+          ]
+        },
+        "gated": {
+          "point": 0.0020061076848974357,
+          "ci": [
+            -0.002717710026058748,
+            0.00767414534580225
+          ]
+        },
+        "random": {
+          "point": -0.003074720934961627,
+          "ci": [
+            -0.00869342081502051,
+            0.0028319251965481036
+          ]
+        },
+        "oracle": {
+          "point": 0.05917090228916616,
+          "ci": [
+            0.04923950166833892,
+            0.07075628683002326
+          ]
+        },
+        "coverage": {
+          "point": 0.39783644513809924,
+          "ci": [
+            0.3816988181811679,
+            0.41398417212664773
+          ]
+        }
+      }
+    },
+    "row_pooled": {
+      "n_passages": 378,
+      "n_rows": 1578,
+      "estimand": "row_pooled",
+      "bootstrap_unit": "passage",
+      "bootstrap_replicates": 10000,
+      "bootstrap_seed": 0,
+      "task_order": [
+        "squad",
+        "drop",
+        "ropes",
+        "pwc"
+      ],
+      "n_passages_per_task": {
+        "squad": 120,
+        "drop": 90,
+        "ropes": 56,
+        "pwc": 112
+      },
+      "uncertainty_scope": "sampling passages conditional on fixed fits, action seeds and MC draws",
+      "metrics": {
+        "selected": {
+          "point": 0.002817713905969437,
+          "ci": [
+            -0.005659957975000947,
+            0.012058051228076069
+          ]
+        },
+        "gated": {
+          "point": 0.0019416912530840417,
+          "ci": [
+            -0.002899587237648327,
+            0.007538953037159285
+          ]
+        },
+        "random": {
+          "point": -0.0029510454497806474,
+          "ci": [
+            -0.008609726088112998,
+            0.0030145749981139044
+          ]
+        },
+        "oracle": {
+          "point": 0.05868509057578743,
+          "ci": [
+            0.04885054936513199,
+            0.06997402182070736
+          ]
+        },
+        "coverage": {
+          "point": 0.3975496408956484,
+          "ci": [
+            0.3815160955347872,
+            0.41373750664540143
+          ]
+        }
+      }
+    },
+    "per_task": {
+      "squad": {
+        "selected": {
+          "point": -0.019974116969587785,
+          "ci": [
+            -0.036658590960785636,
+            -0.004317202860366036
+          ]
+        },
+        "gated": {
+          "point": -0.010516223230995679,
+          "ci": [
+            -0.019653795438585534,
+            -0.00301864922705288
+          ]
+        },
+        "random": {
+          "point": -0.011703736071795387,
+          "ci": [
+            -0.025435853387303815,
+            0.0008326141814253441
+          ]
+        },
+        "oracle": {
+          "point": 0.05654178627420893,
+          "ci": [
+            0.0396084066457969,
+            0.07523971176180301
+          ]
+        },
+        "coverage": {
+          "point": 0.39024390243902457,
+          "ci": [
+            0.3604336043360434,
+            0.42037222222222226
+          ]
+        }
+      },
+      "drop": {
+        "selected": {
+          "point": 0.002819403993158504,
+          "ci": [
+            -0.008175288731660358,
+            0.01426437842687948
+          ]
+        },
+        "gated": {
+          "point": -9.202144297831786e-05,
+          "ci": [
+            -0.005727306707505601,
+            0.005912939102833651
+          ]
+        },
+        "random": {
+          "point": 0.001229143278919503,
+          "ci": [
+            -0.005045106936213276,
+            0.007739447415265057
+          ]
+        },
+        "oracle": {
+          "point": 0.04608995149276037,
+          "ci": [
+            0.033270989231293485,
+            0.059856153526617585
+          ]
+        },
+        "coverage": {
+          "point": 0.3862068965517242,
+          "ci": [
+            0.35525266067497563,
+            0.41684371082710037
+          ]
+        }
+      },
+      "ropes": {
+        "selected": {
+          "point": 0.03773461392385854,
+          "ci": [
+            0.015212127959391955,
+            0.06840298983015626
+          ]
+        },
+        "gated": {
+          "point": 0.021890831470647187,
+          "ci": [
+            0.007734835836653399,
+            0.04181126477559664
+          ]
+        },
+        "random": {
+          "point": 0.008351623366165552,
+          "ci": [
+            -0.0068001957267252305,
+            0.025408457536807764
+          ]
+        },
+        "oracle": {
+          "point": 0.0773620097922585,
+          "ci": [
+            0.04774912178641759,
+            0.116810719419233
+          ]
+        },
+        "coverage": {
+          "point": 0.4091710758377424,
+          "ci": [
+            0.37275599431467055,
+            0.4452614379084966
+          ]
+        }
+      },
+      "pwc": {
+        "selected": {
+          "point": -0.009276068421325298,
+          "ci": [
+            -0.020113950653845435,
+            0.0015755746184072511
+          ]
+        },
+        "gated": {
+          "point": -0.0032581560570834464,
+          "ci": [
+            -0.008661406426195778,
+            0.002283413468905196
+          ]
+        },
+        "random": {
+          "point": -0.010175914313136176,
+          "ci": [
+            -0.018408689022043224,
+            -0.0017645806837767045
+          ]
+        },
+        "oracle": {
+          "point": 0.056689861597436844,
+          "ci": [
+            0.04478520719090042,
+            0.06971471381307902
+          ]
+        },
+        "coverage": {
+          "point": 0.40572390572390576,
+          "ci": [
+            0.37426900584795336,
+            0.43698450151204765
+          ]
+        }
+      }
+    }
+  }
 }

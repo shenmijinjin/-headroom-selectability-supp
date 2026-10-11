@@ -1,27 +1,24 @@
 #!/usr/bin/env python3
-"""R41: passage-level (document-disjoint) G4 deployment evaluation.
+"""Passage-disjoint P3 training and export of sufficient test predictions.
 
-Identical to r18_g4_critic.py EXCEPT the train/dev/test split unit is the PASSAGE, not the QA row.
-A passage groups every QA row that shares the same tokenized context (ctx_ids). All rows of a
-passage go to one split, so no test passage's representation is seen in training.
-
-Passage identity: rows that share a passage are recovered from the e2_perquery grouping (same
-tokenized ctx). Rows not in any multi-query group are their own single-row passage.
-
-Everything else is unchanged: same pools (m0a_qwen), same train/dev/test action seeds
-(42-44/45-46/47-49), same 2-layer width-256 critic, same 20-epoch budget, dev-frozen coverage-0.5
-gate, selected-minus-baseline, 3 init seeds, context-clustered bootstrap CI.
+Passage grouping uses exact equality of the pool's stored `context` field within
+writer/task. No e2_perquery or cross-writer token mapping is consulted. Preserve
+historical lexicographic context ordering for the rng=0 thirds split; anonymize
+only exported passage IDs. The primary metric is task-equal, with QA row/action
+seed weighting within task. CIs condition on fixed fits and bootstrap passages
+jointly after aligning and averaging critic initialization predictions.
 """
 import argparse, json, os
 import numpy as np
 import torch, torch.nn as nn, torch.nn.functional as F
+from bootstrap_utils import anonymous_passage_id, source_sha256
+from p3_statistics import validated_pool, task_equal_point, prediction_rows, fixed_init_points, summarize_inits
 
 MU_DIR = os.path.join(os.environ.get("SCRIPTS_DIR", "scripts"), "qwen_mu_tokens")
 L_LAYERS, R_RANK, D_MODEL = 36, 8, 512
 N_TOKENS = L_LAYERS * R_RANK
 TASKS = ["squad", "drop", "ropes", "pwc"]
 POOL = os.path.join(os.environ.get("RESULTS_DIR", "results"), "m0a_qwen", "rank8_seedSEED_TASK.json")
-E2 = os.path.join(os.environ.get("RESULTS_DIR", "results"), "e2_perquery", "qwen_TASK_s42.json")
 
 
 def gate_dev(act):
@@ -89,21 +86,23 @@ def load_seed(seed):
     out = []
     for task in TASKS:
         f = POOL.replace("SEED", str(seed)).replace("TASK", task)
-        if not os.path.isfile(f): continue
-        d = json.load(open(f)); act = np.load(f.replace(".json", ".actions.npz"))["actions"]
+        if not os.path.isfile(f): raise FileNotFoundError(f)
+        d, act = validated_pool(f, R_RANK)
         for i, r in enumerate(d["rows"]):
             row = int(r["row"])
-            p = "%s::%s" % (task, r["context"])   # passage identity = tokenized context text
+            p = "%s::%s" % (task, r["context"])  # exact stored-context equality
             out.append({"task": task, "row": row, "pid": p, "seed": seed,
+                        "passage_id": anonymous_passage_id(task, r["context"]),
+                        "baseline_reward": float(r["baseline_reward"]),
                         "delta_r": (np.asarray(r["candidate_rewards"], dtype=np.float32) - float(r["baseline_reward"])).tolist(),
                         "act": act[i]})
     return out
 
 
 @torch.no_grad()
-def predict_scores(model, entries, device, cf=0):
+def predict_scores(model, entries, device, cf=0, return_choices=False):
     ld = torch.utils.data.DataLoader(DS(entries, cf), batch_size=8, shuffle=False, collate_fn=collate)
-    sel_delta, max_score, all_dr, pids = [], [], [], []
+    sel_delta, max_score, all_dr, pids, choices = [], [], [], [], []
     for b in ld:
         A = model(b["mu"].to(device), b["u"].to(device)).cpu()
         dr = b["dr"]; sel = A.argmax(1); rows = range(dr.shape[0])
@@ -111,18 +110,9 @@ def predict_scores(model, entries, device, cf=0):
         max_score += A.max(1).values.numpy().tolist()
         all_dr += dr.numpy().tolist()
         pids += b["pid"]
-    return np.array(sel_delta), np.array(max_score), np.array(all_dr), pids
-
-
-def passage_clustered_ci(sel, pids, rng, n_boot=10000):
-    """Bootstrap over passages: resample passages, take all their rows together."""
-    by_p = {}
-    for v, p in zip(sel, pids):
-        by_p.setdefault(p, []).append(v)
-    pmeans = np.array([np.mean(v) for v in by_p.values()])
-    n = len(pmeans)
-    b = pmeans[rng.integers(0, n, (n_boot, n))].mean(1)
-    return [float(np.quantile(b, .025)), float(np.quantile(b, .975))]
+        choices += sel.numpy().tolist()
+    result = (np.array(sel_delta), np.array(max_score), np.array(all_dr), pids)
+    return result + (choices,) if return_choices else result
 
 
 def main():
@@ -131,6 +121,11 @@ def main():
     p.add_argument("--init_seeds", default="0,1,2")
     p.add_argument("--epochs", type=int, default=20)
     p.add_argument("--context_free", type=int, default=0)
+    p.add_argument("--d_hidden", type=int, default=256)
+    p.add_argument("--n_layers", type=int, default=2)
+    p.add_argument("--n_boot", type=int, default=10000)
+    p.add_argument("--gate_objective", choices=["row_pooled", "task_equal_row"], default="row_pooled",
+                   help="Dev gate objective; default preserves the legacy row-pooled selection")
     a = p.parse_args()
     device = "cuda"; os.makedirs(a.out_dir, exist_ok=True)
     tr_seeds, dv_seeds, te_seeds = [42, 43, 44], [45, 46], [47, 48, 49]
@@ -147,15 +142,37 @@ def main():
     dev = [e for e in dev_pool if e["pid"] in dv_p]
     test = [e for e in test_pool if e["pid"] in te_p]
     assert not (tr_p & te_p) and not (dv_p & te_p) and not (tr_p & dv_p)
+    for entries in [train, dev, test]:
+        task_equal_point(np.zeros(len(entries)), [e["task"] for e in entries])
+    source_files = {}
+    for seed in tr_seeds + dv_seeds + te_seeds:
+        for task in TASKS:
+            path = POOL.replace("SEED", str(seed)).replace("TASK", task)
+            source_files[f"reward_pool/{task}/seed{seed}"] = source_sha256(path)
+            action_path = path.replace(".json", ".actions.npz")
+            source_files[f"action_pool/{task}/seed{seed}"] = source_sha256(action_path)
+    for task in TASKS:
+        mu_path = os.path.join(MU_DIR, task + ".pooled.npz")
+        source_files[f"mu_tokens/{task}"] = source_sha256(mu_path)
     n_passages = {"train": len(tr_p), "dev": len(dv_p), "test": len(te_p)}
     print("passage counts:", n_passages, "entries:", len(train), len(dev), len(test), flush=True)
     results = {"meta": {"split_unit": "passage", "context_free": bool(a.context_free), "n_passages": n_passages,
                         "train_seeds": tr_seeds, "dev_seeds": dv_seeds, "test_seeds": te_seeds,
-                        "n_train": len(train), "n_dev": len(dev), "n_test": len(test)},
-               "init_cells": []}
+                        "n_train": len(train), "n_dev": len(dev), "n_test": len(test),
+                        "writer": "qwen", "schema_version": 2,
+                        "passage_identity": "exact stored context equality within writer/task",
+                        "split_rng_seed": 0, "primary_estimand": "task_equal_row",
+                        "gate_dev_objective": a.gate_objective,
+                        "gate_candidate_coverages": [0.3,0.4,0.5,0.6,0.7],
+                        "critic": {"d_hidden": a.d_hidden, "n_layers": a.n_layers},
+                        "epochs": a.epochs, "init_seeds": init_seeds,
+                        "source_files_sha256": source_files,
+                        "metric_definitions": "selected/gated/random/oracle are reward deltas relative to per-row baseline; selected_action_index indexes the source candidate pool",
+                        "init_predictions_file": "predictions.json"},
+               "init_cells": [], "init_predictions": []}
     for init in init_seeds:
         torch.manual_seed(init)
-        model = Critic().to(device)
+        model = Critic(a.d_hidden, a.n_layers).to(device)
         ds_tr = DS(train, a.context_free); acc, nseen = torch.zeros(N_TOKENS, 1, device=device), 0
         for i in range(0, min(len(ds_tr), 256)):
             acc += ds_tr[i]["mu"].to(device).pow(2).mean(-1, keepdim=True); nseen += 1
@@ -174,30 +191,23 @@ def main():
         best_thr, best_net = None, -1e9
         for cov in [0.3, 0.4, 0.5, 0.6, 0.7]:
             thr = np.quantile(dv_gate, 1 - cov); mask = dv_gate > thr
-            net = np.where(mask, dv_sel, 0.0).mean()
+            gated_dev = np.where(mask, dv_sel, 0.0)
+            net = (float(gated_dev.mean()) if a.gate_objective == "row_pooled" else
+                   task_equal_point(gated_dev, [e["task"] for e in dev]))
             if net > best_net: best_net, best_thr = net, thr
-        te_sel, te_gate, te_all, te_pids = predict_scores(model, test, device, a.context_free)
+        te_sel, te_gate, te_all, te_pids, te_choices = predict_scores(model, test, device, a.context_free, return_choices=True)
         mask = te_gate > best_thr
         te_gated = np.where(mask, te_sel, 0.0)
-        rngb = np.random.default_rng(0)
-        per_task = {}
-        per_task_ci = {}
-        for t in TASKS:
-            idx = np.array([i for i, e in enumerate(test) if e["task"] == t])
-            if len(idx):
-                per_task[t] = float(te_sel[idx].mean())
-                tsel = te_sel[idx]; tpid = [te_pids[i] for i in idx]
-                per_task_ci[t] = passage_clustered_ci(tsel, tpid, rngb)
-        results["init_cells"].append({
-            "init": init, "sel": float(te_sel.mean()),
-            "ci_sel_passage": passage_clustered_ci(te_sel, te_pids, rngb),
-            "gated": float(te_gated.mean()),
-            "ci_gated_passage": passage_clustered_ci(te_gated, te_pids, rngb),
-            "random": float(te_all.mean(1).mean()), "oracle": float(te_all.max(1).mean()),
-            "coverage": float(mask.mean()), "per_task": per_task, "per_task_ci": per_task_ci,
-            "n_test_passages": len(set(te_pids))})
+        raw = prediction_rows(test, te_sel, te_gated, te_all, te_gate, mask, te_choices)
+        results["init_predictions"].append({"init": init, "rows": raw})
+        results["init_cells"].append({"init": init, "gate_threshold": float(best_thr),
+                                      "gate_dev_net": float(best_net), **fixed_init_points(raw)})
         print(json.dumps(results["init_cells"][-1]), flush=True)
-    json.dump(results, open(os.path.join(a.out_dir, "report.json"), "w"), indent=2)
+    raw_data = {"meta": results["meta"], "init_predictions": results.pop("init_predictions")}
+    results["aggregate"] = summarize_inits(raw_data["init_predictions"], a.n_boot)
+    with open(os.path.join(a.out_dir, "predictions.json"), "w") as f:
+        json.dump(raw_data, f, indent=2, allow_nan=False)
+    json.dump(results, open(os.path.join(a.out_dir, "report.json"), "w"), indent=2, allow_nan=False)
     print("WROTE", os.path.join(a.out_dir, "report.json"))
 
 

@@ -1,0 +1,462 @@
+{
+  "meta": {
+    "schema_version": 2,
+    "name": "qwen",
+    "split_unit": "passage",
+    "passage_identity": "exact stored context equality within writer/task",
+    "split_rng_seed": 0,
+    "split": "half/half; distinct from P3 thirds",
+    "train_seeds": [
+      42,
+      43,
+      44
+    ],
+    "test_seeds": [
+      47,
+      48,
+      49
+    ],
+    "primary_estimand": "task_equal_row",
+    "epochs": 20,
+    "init_seeds": [
+      0,
+      1,
+      2
+    ],
+    "source_files_sha256": {
+      "reward_pool/squad/seed42": "56b24219c493a1acd021d78ae9809a3f90c2ca014908c81537d56dab1f1ad6cb",
+      "action_pool/squad/seed42": "88b2f9270d04201e922269e220fc66820582caccfb83e0372a9077e167a73d4f",
+      "reward_pool/drop/seed42": "70739a13885007dfaaa575a79a063a4878124a89c87d7dbc3a8721dc4e1cc8c0",
+      "action_pool/drop/seed42": "88b2f9270d04201e922269e220fc66820582caccfb83e0372a9077e167a73d4f",
+      "reward_pool/ropes/seed42": "dcf97ee62652421d864706bdf1a1ac3e44563ae48a13f7771de14f534a7bd3aa",
+      "action_pool/ropes/seed42": "88b2f9270d04201e922269e220fc66820582caccfb83e0372a9077e167a73d4f",
+      "reward_pool/pwc/seed42": "07702c933decbb603d66d53fd6474832c703a9c4c1e85eb3377c2c8c26a1ad14",
+      "action_pool/pwc/seed42": "88b2f9270d04201e922269e220fc66820582caccfb83e0372a9077e167a73d4f",
+      "reward_pool/squad/seed43": "6b34f4ed626420c1b4ad54d3b8cf91e2d2fcc0d26820eff4b43012f7bddd1538",
+      "action_pool/squad/seed43": "81ee6e116a39fb90d00255ae6ff3b373c37f94899d9622884b702112bf0681ce",
+      "reward_pool/drop/seed43": "299d051d6b8c8c6173388fb86a1748e1bdeba107351e50e992cc9dee062d8e3b",
+      "action_pool/drop/seed43": "81ee6e116a39fb90d00255ae6ff3b373c37f94899d9622884b702112bf0681ce",
+      "reward_pool/ropes/seed43": "611c588c217f748bd2be3b5dd89144c17f1926d1961d9a83a76ab05a594f629b",
+      "action_pool/ropes/seed43": "81ee6e116a39fb90d00255ae6ff3b373c37f94899d9622884b702112bf0681ce",
+      "reward_pool/pwc/seed43": "664e4914e5f6175a918360911d5b52f93eeaa03e2569c48d926ec17deb219561",
+      "action_pool/pwc/seed43": "81ee6e116a39fb90d00255ae6ff3b373c37f94899d9622884b702112bf0681ce",
+      "reward_pool/squad/seed44": "f8f01e31cb554d8714c04cc558fbcc27f9ddfb381e3c959247184d5c165f7b1f",
+      "action_pool/squad/seed44": "cf71df8b284d8a59beaf222557372c3e933d3e8f2b7b113a8d9ce279aab6d790",
+      "reward_pool/drop/seed44": "034cde14aae2278d5c7a5807b56dd130a5c5961c566f6f844f43539b96571557",
+      "action_pool/drop/seed44": "cf71df8b284d8a59beaf222557372c3e933d3e8f2b7b113a8d9ce279aab6d790",
+      "reward_pool/ropes/seed44": "107cfed8cb0e9a68c1c17cae74bc63f556f3358995af01f79666530d6564a18c",
+      "action_pool/ropes/seed44": "cf71df8b284d8a59beaf222557372c3e933d3e8f2b7b113a8d9ce279aab6d790",
+      "reward_pool/pwc/seed44": "6dfe3560be9a2c3d6808eb4f96222432c2a319211a15f2b2fc1587cbb73a496b",
+      "action_pool/pwc/seed44": "cf71df8b284d8a59beaf222557372c3e933d3e8f2b7b113a8d9ce279aab6d790",
+      "reward_pool/squad/seed47": "e7f7df9bc7848a65b22addff6dc63e57c7740d248e33ee3b7d11114696757fce",
+      "action_pool/squad/seed47": "52341687c96f2d6b8a1b32a35c36864b2905be0af0013c06d338b405d55830e7",
+      "reward_pool/drop/seed47": "86fe37f0dea2f13cb6d7653d01038bb6d7e6cdf5f06dbfdc2a5b1a7ebb040fe8",
+      "action_pool/drop/seed47": "52341687c96f2d6b8a1b32a35c36864b2905be0af0013c06d338b405d55830e7",
+      "reward_pool/ropes/seed47": "cf0b46127b00506d7deb953b19c5fd1eb5aadec186d22804b2fb2364dcdec898",
+      "action_pool/ropes/seed47": "52341687c96f2d6b8a1b32a35c36864b2905be0af0013c06d338b405d55830e7",
+      "reward_pool/pwc/seed47": "1e847ae021c556fae94420b51e733526d82ae417885979f3b6fca46219bbd511",
+      "action_pool/pwc/seed47": "52341687c96f2d6b8a1b32a35c36864b2905be0af0013c06d338b405d55830e7",
+      "reward_pool/squad/seed48": "864959e0fc94535ce74cba48bcb6d8c118bde59548b733673e25e1ce5abf5307",
+      "action_pool/squad/seed48": "79ba929e600c1db9cc9e86f84ff600d30bb461d6844be78bab6d3363607dc6dc",
+      "reward_pool/drop/seed48": "93bd34a681878dd2fbc2d266f333c6dc10863d24ae3c9821f022e6a3cdbd382c",
+      "action_pool/drop/seed48": "79ba929e600c1db9cc9e86f84ff600d30bb461d6844be78bab6d3363607dc6dc",
+      "reward_pool/ropes/seed48": "fc9ff0135a7246ce28d1f9059dfca5fc9147ee6a7d7f452c7506be13bd043d17",
+      "action_pool/ropes/seed48": "79ba929e600c1db9cc9e86f84ff600d30bb461d6844be78bab6d3363607dc6dc",
+      "reward_pool/pwc/seed48": "4c03296cb24db141278275fc01d9fd477413e4ea1184164108ec1d8de0aec96e",
+      "action_pool/pwc/seed48": "79ba929e600c1db9cc9e86f84ff600d30bb461d6844be78bab6d3363607dc6dc",
+      "reward_pool/squad/seed49": "6dd5878d93394f40e9aafe8637cbd37b54f7e7e4333a33f164a361b96949f579",
+      "action_pool/squad/seed49": "380259aa88aa99285d2521f0359daf4949b835173592d035b60cf8774bd92148",
+      "reward_pool/drop/seed49": "f706ab43f53288dc861cbccf9ddbecc3f563f551b314cad7fb50112d8b507418",
+      "action_pool/drop/seed49": "380259aa88aa99285d2521f0359daf4949b835173592d035b60cf8774bd92148",
+      "reward_pool/ropes/seed49": "99082230fc9e2023385104e0577c6c9dde4c5cd7d23f441de0370d8ee7d592f2",
+      "action_pool/ropes/seed49": "380259aa88aa99285d2521f0359daf4949b835173592d035b60cf8774bd92148",
+      "reward_pool/pwc/seed49": "de3eb09e27efdf315bfa7dcaaa871428da4d37640a17343a1ceeca7ab9804974",
+      "action_pool/pwc/seed49": "380259aa88aa99285d2521f0359daf4949b835173592d035b60cf8774bd92148",
+      "mu_tokens/squad": "4b8ba2502e7997cd532f1db81dadd3199048dd3cb747b1d0624810d3e5e03744",
+      "mu_tokens/drop": "515773d25f4dada7d5dd27bce1aa057a183e82a363395177d0a8b038d345855f",
+      "mu_tokens/ropes": "f71735c2c21ff4add975a0547c9d393960b4f8cb3086ae348c36abaacc3c88da",
+      "mu_tokens/pwc": "fa0dd3d93199f57759f1a48609cea69e1e8919058c628bbfe27ede5b7f8d0865"
+    },
+    "metric_definitions": "selected/random/oracle are reward deltas relative to baseline; selected_action_index indexes source candidate pool",
+    "init_predictions_file": "predictions.json"
+  },
+  "init_cells": [
+    {
+      "init": 0,
+      "A": {
+        "task_equal_row": {
+          "sel_minus_base": 0.033756122856503146,
+          "sel_minus_random": 0.04030486303491702
+        },
+        "row_pooled": {
+          "sel_minus_base": 0.034553397379874784,
+          "sel_minus_random": 0.04097316684341584
+        }
+      },
+      "B": {
+        "task_equal_row": {
+          "sel_minus_base": 0.015064536168883464,
+          "sel_minus_random": 0.022465375722538834
+        },
+        "row_pooled": {
+          "sel_minus_base": 0.015729809803510374,
+          "sel_minus_random": 0.022940132582917754
+        }
+      },
+      "C": {
+        "task_equal_row": {
+          "sel_minus_base": -0.00040248088108794716,
+          "sel_minus_random": 0.003835777032384425
+        },
+        "row_pooled": {
+          "sel_minus_base": -0.00048824955642396556,
+          "sel_minus_random": 0.00356895828420693
+        }
+      },
+      "D": {
+        "task_equal_row": {
+          "sel_minus_base": -0.00010941479332943096,
+          "sel_minus_random": 0.003556664418829836
+        },
+        "row_pooled": {
+          "sel_minus_base": -6.501092786188193e-05,
+          "sel_minus_random": 0.0033994449280614508
+        }
+      }
+    },
+    {
+      "init": 1,
+      "A": {
+        "task_equal_row": {
+          "sel_minus_base": 0.03585129238212957,
+          "sel_minus_random": 0.04240003256054343
+        },
+        "row_pooled": {
+          "sel_minus_base": 0.03668167788554053,
+          "sel_minus_random": 0.043101447349081584
+        }
+      },
+      "B": {
+        "task_equal_row": {
+          "sel_minus_base": 0.015401806752906626,
+          "sel_minus_random": 0.022802646306561997
+        },
+        "row_pooled": {
+          "sel_minus_base": 0.01614849114325482,
+          "sel_minus_random": 0.023358813922662196
+        }
+      },
+      "C": {
+        "task_equal_row": {
+          "sel_minus_base": -0.0011686737507226703,
+          "sel_minus_random": 0.003069584162749703
+        },
+        "row_pooled": {
+          "sel_minus_base": -0.0011246055526981317,
+          "sel_minus_random": 0.0029326022879327634
+        }
+      },
+      "D": {
+        "task_equal_row": {
+          "sel_minus_base": 0.0018112054977389705,
+          "sel_minus_random": 0.005477284709898237
+        },
+        "row_pooled": {
+          "sel_minus_base": 0.001676120627911173,
+          "sel_minus_random": 0.0051405764838345054
+        }
+      }
+    },
+    {
+      "init": 2,
+      "A": {
+        "task_equal_row": {
+          "sel_minus_base": 0.03380875532365865,
+          "sel_minus_random": 0.040357495502072516
+        },
+        "row_pooled": {
+          "sel_minus_base": 0.03464297114453496,
+          "sel_minus_random": 0.04106274060807602
+        }
+      },
+      "B": {
+        "task_equal_row": {
+          "sel_minus_base": 0.01676272295122578,
+          "sel_minus_random": 0.024163562504881154
+        },
+        "row_pooled": {
+          "sel_minus_base": 0.017438869416208907,
+          "sel_minus_random": 0.024649192195616284
+        }
+      },
+      "C": {
+        "task_equal_row": {
+          "sel_minus_base": 0.0004919511654791151,
+          "sel_minus_random": 0.004730209078951487
+        },
+        "row_pooled": {
+          "sel_minus_base": 0.0006032104840932817,
+          "sel_minus_random": 0.004660418324724177
+        }
+      },
+      "D": {
+        "task_equal_row": {
+          "sel_minus_base": 0.00011474530955345088,
+          "sel_minus_random": 0.003780824521712718
+        },
+        "row_pooled": {
+          "sel_minus_base": 0.0002573095625455867,
+          "sel_minus_random": 0.0037217654184689194
+        }
+      }
+    }
+  ],
+  "aggregate": {
+    "schema_version": 2,
+    "n_fixed_inits": 3,
+    "primary_estimand": "task_equal_row",
+    "cells": [
+      "A",
+      "B",
+      "C",
+      "D"
+    ],
+    "init_aggregation": "align identities and average predictions before shared passage resampling",
+    "strata": "task x seen/unseen passages; seen and unseen are disjoint cohorts",
+    "uncertainty_scope": "passage sampling conditional on fixed fits and action seeds",
+    "task_equal_row": {
+      "n_passages": 1132,
+      "n_rows": 9600,
+      "estimand": "task_equal_row",
+      "bootstrap_unit": "passage",
+      "bootstrap_replicates": 10000,
+      "bootstrap_seed": 0,
+      "task_order": [
+        "squad",
+        "drop",
+        "ropes",
+        "pwc"
+      ],
+      "n_passages_per_task": {
+        "squad": 367,
+        "drop": 256,
+        "ropes": 169,
+        "pwc": 340
+      },
+      "uncertainty_scope": "sampling passages conditional on fixed fits, action seeds and MC draws",
+      "cells": {
+        "A": {
+          "selected_minus_base": {
+            "point": 0.03447205685409712,
+            "ci": [
+              0.028565784725081186,
+              0.041309913638633976
+            ]
+          },
+          "selected_minus_random": {
+            "point": 0.04102079703251098,
+            "ci": [
+              0.036651407322549054,
+              0.04586943604975132
+            ]
+          }
+        },
+        "B": {
+          "selected_minus_base": {
+            "point": 0.015743021957671955,
+            "ci": [
+              0.009724106518639029,
+              0.022787779262891793
+            ]
+          },
+          "selected_minus_random": {
+            "point": 0.023143861511327333,
+            "ci": [
+              0.019380499810554376,
+              0.027623801980518142
+            ]
+          }
+        },
+        "C": {
+          "selected_minus_base": {
+            "point": -0.00035973448877717087,
+            "ci": [
+              -0.005332933079530153,
+              0.004691717060505402
+            ]
+          },
+          "selected_minus_random": {
+            "point": 0.003878523424695205,
+            "ci": [
+              0.0011841027511142427,
+              0.00670337007773103
+            ]
+          }
+        },
+        "D": {
+          "selected_minus_base": {
+            "point": 0.0006055120046543315,
+            "ci": [
+              -0.005159033548995531,
+              0.006951148898273504
+            ]
+          },
+          "selected_minus_random": {
+            "point": 0.004271591216813597,
+            "ci": [
+              0.0011045066511221238,
+              0.007573530365611187
+            ]
+          }
+        }
+      },
+      "contrasts": {
+        "A-C": {
+          "point": 0.03483179134287429,
+          "ci": [
+            0.026838019066272954,
+            0.04315440567469919
+          ]
+        },
+        "B-D": {
+          "point": 0.015137509953017624,
+          "ci": [
+            0.006296465085275585,
+            0.024110067142369407
+          ]
+        },
+        "A-B": {
+          "point": 0.018729034896425165,
+          "ci": [
+            0.01574034356256301,
+            0.021946620767797024
+          ]
+        },
+        "C-D": {
+          "point": -0.0009652464934315024,
+          "ci": [
+            -0.004316446402840805,
+            0.002155287304667579
+          ]
+        }
+      }
+    },
+    "row_pooled": {
+      "n_passages": 1132,
+      "n_rows": 9600,
+      "estimand": "row_pooled",
+      "bootstrap_unit": "passage",
+      "bootstrap_replicates": 10000,
+      "bootstrap_seed": 0,
+      "task_order": [
+        "squad",
+        "drop",
+        "ropes",
+        "pwc"
+      ],
+      "n_passages_per_task": {
+        "squad": 367,
+        "drop": 256,
+        "ropes": 169,
+        "pwc": 340
+      },
+      "uncertainty_scope": "sampling passages conditional on fixed fits, action seeds and MC draws",
+      "cells": {
+        "A": {
+          "selected_minus_base": {
+            "point": 0.03529268213665008,
+            "ci": [
+              0.029002088335728277,
+              0.04238483960997603
+            ]
+          },
+          "selected_minus_random": {
+            "point": 0.04171245160019114,
+            "ci": [
+              0.0369470724492271,
+              0.04705699350054139
+            ]
+          }
+        },
+        "B": {
+          "selected_minus_base": {
+            "point": 0.016439056787658033,
+            "ci": [
+              0.01015717611174207,
+              0.02370528102694706
+            ]
+          },
+          "selected_minus_random": {
+            "point": 0.023649379567065417,
+            "ci": [
+              0.019711420154477993,
+              0.02841348914331908
+            ]
+          }
+        },
+        "C": {
+          "selected_minus_base": {
+            "point": -0.00033654820834294044,
+            "ci": [
+              -0.005187029145062346,
+              0.004529118590425229
+            ]
+          },
+          "selected_minus_random": {
+            "point": 0.003720659632287956,
+            "ci": [
+              0.001174719900392446,
+              0.006407861421289967
+            ]
+          }
+        },
+        "D": {
+          "selected_minus_base": {
+            "point": 0.0006228064208649604,
+            "ci": [
+              -0.005018418923974602,
+              0.006617103901508899
+            ]
+          },
+          "selected_minus_random": {
+            "point": 0.00408726227678829,
+            "ci": [
+              0.001195236245151311,
+              0.007140471364942912
+            ]
+          }
+        }
+      },
+      "contrasts": {
+        "A-C": {
+          "point": 0.03562923034499302,
+          "ci": [
+            0.027509008449148345,
+            0.044283231963121866
+          ]
+        },
+        "B-D": {
+          "point": 0.015816250366793072,
+          "ci": [
+            0.006862894632004342,
+            0.02509619517037196
+          ]
+        },
+        "A-B": {
+          "point": 0.018853625348992046,
+          "ci": [
+            0.015647171477435287,
+            0.022327958831913745
+          ]
+        },
+        "C-D": {
+          "point": -0.0009593546292079009,
+          "ci": [
+            -0.004148868734106842,
+            0.0020600813498107043
+          ]
+        }
+      }
+    }
+  }
+}
